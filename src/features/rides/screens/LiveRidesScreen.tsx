@@ -1,4 +1,5 @@
-import { ScrollView, Text, StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ScrollView, Text, StyleSheet, View, Alert, RefreshControl, TouchableOpacity, Image } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import RideCard from '../components/RideCard';
@@ -9,6 +10,7 @@ import { shouldShowDriverPostCta } from '../utils/driverEligibility';
 import { useCreateRidePost } from '../hooks/useCreateRidePost';
 import type { PostRideSubmitPayload } from '../types/postRide';
 import { useRideFeed } from '../hooks/useRideFeed';
+import liveRidePlaceholder from '../../../../assets/placeholders/live-ride-placeholder.png';
 
 const LiveRidesScreen = () => {
   const { role } = useRoleStore();
@@ -38,6 +40,10 @@ const LiveRidesScreen = () => {
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.container} refreshControl={<RefreshControl refreshing={feed.refreshing} onRefresh={feed.refresh} />}>
         <Text style={styles.title}>Live Ride Exchange</Text>
+        <View style={styles.placeholderSection}>
+          <Image source={liveRidePlaceholder} style={styles.placeholderImage} resizeMode="cover" accessibilityRole="image" accessibilityLabel="Preview of the live ride experience" />
+          <Text style={styles.placeholderCaption}>Map preview coming soon – this placeholder shows where the live ride view will render.</Text>
+        </View>
         {feed.offline && (
           <View style={styles.noticeBanner}>
             <Text style={styles.noticeText}>Offline. Showing cached rides.</Text>
@@ -107,6 +113,20 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     marginBottom: 12
+  },
+  placeholderSection: {
+    marginBottom: 24
+  },
+  placeholderImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    backgroundColor: '#EFF6FF'
+  },
+  placeholderCaption: {
+    marginTop: 8,
+    fontSize: 13,
+    color: '#4B5563'
   },
   body: {
     fontSize: 16,

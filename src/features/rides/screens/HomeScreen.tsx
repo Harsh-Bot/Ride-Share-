@@ -7,6 +7,7 @@ import { MainTabParamList, RideTabParams } from '../../../navigation/types';
 import { useProfileStore } from '../../../store/useProfileStore';
 import { useRoleStore } from '../../../store/useRoleStore';
 import { navigationTheme } from '../../../theme/navigationTheme';
+import { MapBootstrapStatus } from '../../../components/maps/MapBootstrapStatus';
 // TODO: Integrate Google Places Autocomplete via `resolveCampus` API.
 // import { resolveCampus } from '../../../services/api/maps';
 import headerImage from '../../../../assets/images/homepage.png';
@@ -150,6 +151,11 @@ const HomeScreen = () => {
           </TouchableOpacity>
         ))}
       </View>
+
+      <View style={styles.mapBootstrapWrapper}>
+        <Text style={styles.segmentLabel}>Maps status</Text>
+        <MapBootstrapStatus containerStyle={styles.mapBootstrapStatus} />
+      </View>
     </KeyboardSafe>
   );
 };
@@ -244,6 +250,14 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 16
+  },
+  mapBootstrapWrapper: {
+    marginTop: 32,
+    gap: 8
+  },
+  mapBootstrapStatus: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#BFDBFE'
   }
 });
 

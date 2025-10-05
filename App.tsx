@@ -10,6 +10,7 @@ import { NotificationsProvider } from './src/contexts/NotificationsContext';
 import { AppThemeProvider } from './src/theme/AppThemeProvider';
 import { navigationTheme } from './src/theme/navigationTheme';
 import { linkingConfig } from './src/navigation/linking';
+import { MapProvider } from './src/contexts/MapContext';
 
 const App = () => {
   const queryClient = useMemo(() => new QueryClient(), []);
@@ -20,10 +21,12 @@ const App = () => {
         <AuthProvider>
           <NotificationsProvider>
             <AppThemeProvider>
-              <NavigationContainer theme={navigationTheme} linking={linkingConfig}>
-                <StatusBar style="auto" />
-                <AppNavigator />
-              </NavigationContainer>
+              <MapProvider>
+                <NavigationContainer theme={navigationTheme} linking={linkingConfig}>
+                  <StatusBar style="auto" />
+                  <AppNavigator />
+                </NavigationContainer>
+              </MapProvider>
             </AppThemeProvider>
           </NotificationsProvider>
         </AuthProvider>

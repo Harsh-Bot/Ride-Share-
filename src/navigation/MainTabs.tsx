@@ -5,8 +5,6 @@ import HomeScreen from '../features/rides/screens/HomeScreen';
 import LiveRidesScreen from '../features/rides/screens/LiveRidesScreen';
 import ScheduledRidesScreen from '../features/rides/screens/ScheduledRidesScreen';
 import ChatListScreen from '../features/chat/screens/ChatListScreen';
-import DriverConsoleScreen from '../features/rides/screens/DriverConsoleScreen';
-import MyRidesScreen from '../features/rides/screens/MyRidesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();

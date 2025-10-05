@@ -56,7 +56,7 @@ describe('SignInScreen', () => {
     );
 
     fireEvent.changeText(getByPlaceholderText('Nickname'), 'A');
-    fireEvent.press(getByText('Send magic link'));
+    fireEvent.press(getByText('Send verification code'));
 
     expect(getByText('Nickname must be between 2 and 20 characters.')).toBeTruthy();
   });
@@ -69,7 +69,7 @@ describe('SignInScreen', () => {
     );
 
     fireEvent.changeText(getByPlaceholderText('Nickname'), 'Harmeet');
-    fireEvent.press(getByText('Send magic link'));
+    fireEvent.press(getByText('Send verification code'));
 
     expect(getByText('Please select a gender or choose rather not say.')).toBeTruthy();
   });
@@ -85,7 +85,7 @@ describe('SignInScreen', () => {
     fireEvent.changeText(getByPlaceholderText('Nickname'), 'Harmeet');
     fireEvent.press(getByLabelText('Gender Male'));
     fireEvent.changeText(getByLabelText('Enter your SFU email'), 'user@sfu.ca');
-    fireEvent.press(getByText('Send magic link'));
+    fireEvent.press(getByText('Send verification code'));
 
     await waitFor(() => {
       expect(mockInitiateSignIn).toHaveBeenCalledWith('user@sfu.ca');
