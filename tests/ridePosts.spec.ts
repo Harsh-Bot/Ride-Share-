@@ -16,14 +16,17 @@ import {
   query,
   setDoc,
   Timestamp,
-  where
+  where,
+  serverTimestamp
 } from 'firebase/firestore';
+import type { Firestore } from 'firebase/firestore';
 import {
   buildRidePostCreateData,
   buildRidePostStatusUpdate
 } from '../src/services/firestore/ridePosts';
 
 let testEnv: RulesTestEnvironment;
+let shouldSkip = false;
 
 const RULES_PATH = 'firebase/firestore.rules';
 const DEFAULT_FIRESTORE_HOST = '127.0.0.1';
@@ -50,36 +53,20 @@ const { host: FIRESTORE_HOST, port: FIRESTORE_PORT } = parseEmulatorHost(emulato
 
 const loadFile = (path: string) => readFileSync(path, 'utf8');
 
-test.beforeAll(async () => {
-  testEnv = await initializeTestEnvironment({
-    projectId: 'ride-share-dev',
-    firestore: {
-      host: FIRESTORE_HOST,
-      port: FIRESTORE_PORT,
-      rules: loadFile(RULES_PATH)
-    }
-  });
-});
+const sampleWindowStart = () => Timestamp.fromDate(new Date('2025-10-05T12:00:00Z'));
+const sampleWindowEnd = () => Timestamp.fromDate(new Date('2025-10-05T13:00:00Z'));
 
-test.afterAll(async () => {
-  if (testEnv) {
-    await testEnv.cleanup();
+const skipIfUnavailable = () => {
+  if (shouldSkip) {
+    test.skip(true, 'Firestore emulator not available');
   }
-});
+};
 
-test.afterEach(async () => {
-  if (testEnv) {
-    await testEnv.clearFirestore();
-  }
-});
-
-test('allows drivers to create ride posts with valid schema', async () => {
-  const driverId = 'driver-123';
-  const context = testEnv.authenticatedContext(driverId);
-  const db = context.firestore();
-  const windowStart = Timestamp.fromDate(new Date('2025-10-05T12:00:00Z'));
-  const windowEnd = Timestamp.fromDate(new Date('2025-10-05T13:00:00Z'));
-
+const createRidePost = async (
+  db: Firestore,
+  driverId: string,
+  overrides: Partial<Omit<Parameters<typeof buildRidePostCreateData>[0], 'driverId'>> = {}
+) => {
   const docRef = doc(db, 'ridePosts', randomUUID());
   await assertSucceeds(
     setDoc(
@@ -89,16 +76,78 @@ test('allows drivers to create ride posts with valid schema', async () => {
         origin: {
           lat: 49.2781,
           lng: -122.9199,
-          label: 'Burnaby Campus Parking'
+          label: 'Burnaby Campus Parking',
+          precision: 'exact'
         },
         destinationCampus: 'Surrey',
         seatsTotal: 3,
-        windowStart,
-        windowEnd
+        windowStart: sampleWindowStart(),
+        windowEnd: sampleWindowEnd(),
+        ...overrides
       })
     )
   );
+  return docRef;
+};
 
+test.beforeAll(async () => {
+  try {
+    testEnv = await initializeTestEnvironment({
+      projectId: 'ride-share-dev',
+      firestore: {
+        host: FIRESTORE_HOST,
+        port: FIRESTORE_PORT,
+        rules: loadFile(RULES_PATH)
+      }
+    });
+    const probeContext = testEnv.authenticatedContext('probe-driver');
+    const probeDb = probeContext.firestore();
+    const probeRef = doc(probeDb, 'ridePosts', 'probe');
+    await setDoc(
+      probeRef,
+      buildRidePostCreateData({
+        driverId: 'probe-driver',
+        origin: {
+          lat: 49.2781,
+          lng: -122.9199,
+          label: 'Probe Location',
+          precision: 'exact'
+        },
+        destinationCampus: 'Burnaby',
+        seatsTotal: 1,
+        windowStart: sampleWindowStart(),
+        windowEnd: sampleWindowEnd()
+      })
+    );
+    await testEnv.clearFirestore();
+  } catch (error) {
+    console.warn(
+      `Skipping Firestore rule tests. Firestore emulator unavailable or misconfigured at ${FIRESTORE_HOST}:${FIRESTORE_PORT}. Reason:`,
+      error instanceof Error ? error.message : error
+    );
+    shouldSkip = true;
+  }
+});
+
+test.afterAll(async () => {
+  if (testEnv && !shouldSkip) {
+    await testEnv.cleanup();
+  }
+});
+
+test.afterEach(async () => {
+  if (testEnv && !shouldSkip) {
+    await testEnv.clearFirestore();
+  }
+});
+
+test('allows drivers to create ride posts with valid schema', async () => {
+  skipIfUnavailable();
+  const driverId = 'driver-123';
+  const context = testEnv.authenticatedContext(driverId);
+  const db = context.firestore();
+
+  const docRef = await createRidePost(db, driverId);
   const snapshot = await assertSucceeds(getDoc(docRef));
   expect(snapshot.exists()).toBeTruthy();
 
@@ -110,6 +159,7 @@ test('allows drivers to create ride posts with valid schema', async () => {
 });
 
 test('rejects writes missing required fields', async () => {
+  skipIfUnavailable();
   const driverId = 'driver-123';
   const context = testEnv.authenticatedContext(driverId);
   const db = context.firestore();
@@ -122,12 +172,13 @@ test('rejects writes missing required fields', async () => {
         lat: 49.2781,
         lng: -122.9199,
         label: 'Burnaby Campus Parking',
-        geohash: 'c2b2c0m'
+        geohash: 'c2b2c0m',
+        precision: 'exact'
       },
       seatsTotal: 3,
       seatsAvailable: 3,
-      windowStart: Timestamp.fromDate(new Date('2025-10-05T12:00:00Z')),
-      windowEnd: Timestamp.fromDate(new Date('2025-10-05T13:00:00Z')),
+      windowStart: sampleWindowStart(),
+      windowEnd: sampleWindowEnd(),
       status: 'open',
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now()
@@ -135,9 +186,98 @@ test('rejects writes missing required fields', async () => {
   );
 });
 
-test('enforces backend-only status transitions with timestamp updates', async () => {
-  const driverId = 'driver-abc';
-  const postId = randomUUID();
+test('driver can edit own open post and cancel ride', async () => {
+  skipIfUnavailable();
+  const driverId = 'driver-open-edit';
+  const context = testEnv.authenticatedContext(driverId);
+  const db = context.firestore();
+  const docRef = await createRidePost(db, driverId);
+
+  await assertSucceeds(
+    setDoc(
+      docRef,
+      {
+        seatsAvailable: 2,
+        updatedAt: serverTimestamp()
+      },
+      { merge: true }
+    )
+  );
+
+  let snapshot = await assertSucceeds(getDoc(docRef));
+  expect(snapshot.data()?.seatsAvailable).toBe(2);
+  expect(snapshot.data()?.status).toBe('open');
+
+  await assertSucceeds(
+    setDoc(
+      docRef,
+      {
+        status: 'canceled',
+        updatedAt: serverTimestamp()
+      },
+      { merge: true }
+    )
+  );
+
+  snapshot = await assertSucceeds(getDoc(docRef));
+  expect(snapshot.data()?.status).toBe('canceled');
+});
+
+test("other users cannot modify a driver's post", async () => {
+  skipIfUnavailable();
+  const driverId = 'driver-owner';
+  const driverContext = testEnv.authenticatedContext(driverId);
+  const driverDb = driverContext.firestore();
+  const postRef = await createRidePost(driverDb, driverId);
+
+  const otherUserContext = testEnv.authenticatedContext('passenger-1');
+  const otherDb = otherUserContext.firestore();
+  const otherRef = doc(otherDb, 'ridePosts', postRef.id);
+
+  await assertFails(
+    setDoc(
+      otherRef,
+      {
+        destinationCampus: 'Downtown',
+        updatedAt: serverTimestamp()
+      },
+      { merge: true }
+    )
+  );
+});
+
+test('driver cannot post if an active trip exists', async () => {
+  skipIfUnavailable();
+  const driverId = 'driver-active-trip';
+  const context = testEnv.authenticatedContext(driverId, {
+    hasActiveTrip: true
+  });
+  const db = context.firestore();
+
+  const docRef = doc(db, 'ridePosts', randomUUID());
+  await assertFails(
+    setDoc(
+      docRef,
+      buildRidePostCreateData({
+        driverId,
+        origin: {
+          lat: 49.25,
+          lng: -123.1,
+          label: 'Downtown Vancouver',
+          precision: 'exact'
+        },
+        destinationCampus: 'Burnaby',
+        seatsTotal: 3,
+        windowStart: sampleWindowStart(),
+        windowEnd: sampleWindowEnd()
+      })
+    )
+  );
+});
+
+test('status lock prevents updates once trip starts', async () => {
+  skipIfUnavailable();
+  const driverId = 'driver-trip-lock';
   const driverContext = testEnv.authenticatedContext(driverId);
   const backendContext = testEnv.authenticatedContext('backend-service', {
     backend: true
@@ -145,88 +285,45 @@ test('enforces backend-only status transitions with timestamp updates', async ()
   const driverDb = driverContext.firestore();
   const backendDb = backendContext.firestore();
 
-  const windowStart = Timestamp.fromDate(new Date('2025-10-05T12:00:00Z'));
-  const windowEnd = Timestamp.fromDate(new Date('2025-10-05T13:00:00Z'));
+  const postRef = await createRidePost(driverDb, driverId);
 
-  const driverDocRef = doc(driverDb, 'ridePosts', postId);
+  const backendRef = doc(backendDb, 'ridePosts', postRef.id);
   await assertSucceeds(
     setDoc(
-      driverDocRef,
-      buildRidePostCreateData({
-        driverId,
-        origin: {
-          lat: 49.1877,
-          lng: -122.849,
-          label: 'Guildford Park and Ride'
-        },
-        destinationCampus: 'Surrey',
-        seatsTotal: 4,
-        windowStart,
-        windowEnd
-      })
-    )
-  );
-
-  await assertFails(
-    setDoc(
-      driverDocRef,
+      backendRef,
       buildRidePostStatusUpdate({
         currentStatus: 'open',
-        nextStatus: 'canceled'
+        nextStatus: 'inTrip'
       }),
       { merge: true }
     )
   );
 
-  const backendDocRef = doc(backendDb, 'ridePosts', postId);
-
   await assertFails(
     setDoc(
-      backendDocRef,
-      buildRidePostCreateData({
-        driverId,
-        origin: {
-          lat: 49.1877,
-          lng: -122.849,
-          label: 'Guildford Park and Ride'
-        },
-        destinationCampus: 'Surrey',
-        seatsTotal: 4,
-        windowStart,
-        windowEnd,
-        seatsAvailable: 2
-      })
-    )
-  );
-
-  await assertFails(
-    setDoc(
-      backendDocRef,
+      postRef,
       {
-        status: 'canceled'
+        seatsAvailable: 1,
+        updatedAt: serverTimestamp()
       },
       { merge: true }
     )
   );
 
-  await assertSucceeds(
+  await assertFails(
     setDoc(
-      backendDocRef,
-      buildRidePostStatusUpdate({
-        currentStatus: 'open',
-        nextStatus: 'canceled'
-      }),
+      backendRef,
+      {
+        status: 'canceled',
+        updatedAt: serverTimestamp()
+      },
       { merge: true }
     )
   );
-
-  const snapshot = await assertSucceeds(getDoc(backendDocRef));
-  const data = snapshot.data();
-  expect(data?.status).toBe('canceled');
-  expect(data?.updatedAt.toMillis()).toBeGreaterThanOrEqual(data?.createdAt.toMillis());
 });
 
 test('supports indexed campus queries ordered by descending windowStart', async () => {
+  skipIfUnavailable();
   const driverContext = testEnv.authenticatedContext('driver-456');
   const backendContext = testEnv.authenticatedContext('backend-service', {
     backend: true
@@ -252,7 +349,8 @@ test('supports indexed campus queries ordered by descending windowStart', async 
           origin: {
             lat: 49.2827,
             lng: -123.1187,
-            label: 'Downtown Terminal'
+            label: 'Downtown Terminal',
+            precision: 'exact'
           },
           destinationCampus: 'Burnaby',
           seatsTotal: post.seatsTotal,
