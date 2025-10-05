@@ -5,12 +5,24 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function hasBackendClaim() {
+      return request.auth != null && request.auth.token is map && request.auth.token.keys().hasAny(['backend']);
+    }
+
+    function hasActiveTripClaim() {
+      return request.auth != null && request.auth.token is map && request.auth.token.keys().hasAny(['hasActiveTrip']);
+    }
+
     function isBackend() {
-      return isAuthenticated() && request.auth.token.backend == true;
+      return isAuthenticated() && hasBackendClaim() ? request.auth.token.backend == true : false;
     }
 
     function isDriverCreatingOwnRide(data) {
       return isAuthenticated() && data.driverId is string && request.auth.uid == data.driverId;
+    }
+
+    function driverHasActiveTrip() {
+      return hasActiveTripClaim() ? request.auth.token.hasActiveTrip == true : false;
     }
 
     function listContains(list, value) {
@@ -19,11 +31,22 @@ service cloud.firestore {
 
     function isValidOrigin(origin) {
       return origin is map &&
-        origin.keys().hasOnly(['lat', 'lng', 'label', 'geohash']) &&
-        origin.lat is number && origin.lat >= -90 && origin.lat <= 90 &&
-        origin.lng is number && origin.lng >= -180 && origin.lng <= 180 &&
+        origin.keys().hasOnly(['lat', 'lng', 'label', 'geohash', 'precision']) &&
         origin.label is string && origin.label.size() > 0 && origin.label.size() <= 120 &&
-        origin.geohash is string && origin.geohash.size() >= 3 && origin.geohash.size() <= 12;
+        origin.precision is string && listContains(['exact', 'approximate'], origin.precision) &&
+        (
+          (
+            origin.precision == 'exact' &&
+            origin.lat is number && origin.lat >= -90 && origin.lat <= 90 &&
+            origin.lng is number && origin.lng >= -180 && origin.lng <= 180 &&
+            origin.geohash is string && origin.geohash.size() >= 3 && origin.geohash.size() <= 12
+          ) || (
+            origin.precision == 'approximate' &&
+            ((origin.lat == null) || (origin.lat is number && origin.lat >= -90 && origin.lat <= 90)) &&
+            ((origin.lng == null) || (origin.lng is number && origin.lng >= -180 && origin.lng <= 180)) &&
+            origin.geohash is string && origin.geohash.size() > 0
+          )
+        );
     }
 
     function hasValidCoreFields(data) {
@@ -53,14 +76,27 @@ service cloud.firestore {
       return hasValidCoreFields(data) &&
         data.status == 'open' &&
         data.createdAt == request.time &&
-        data.updatedAt == request.time;
+        data.updatedAt == request.time &&
+        !driverHasActiveTrip();
     }
 
-    function isValidRidePostUpdate(data) {
+    function isValidDriverRideUpdate(data) {
       return hasValidCoreFields(data) &&
-        data.driverId == resource.data.driverId &&
+        resource.data.driverId is string && resource.data.driverId == data.driverId &&
+        resource.data.status == 'open' &&
+        isDriverCreatingOwnRide(resource.data) &&
         data.createdAt == resource.data.createdAt &&
         data.updatedAt == request.time &&
+        (data.status == 'open' || data.status == 'canceled');
+    }
+
+    function isValidBackendRideUpdate(data) {
+      return hasValidCoreFields(data) &&
+        resource.data.driverId is string && resource.data.driverId == data.driverId &&
+        resource.data.status == 'open' &&
+        data.createdAt == resource.data.createdAt &&
+        data.updatedAt == request.time &&
+        data.status != 'open' &&
         isValidStatusTransition(resource.data.status, data.status);
     }
 
@@ -72,8 +108,59 @@ service cloud.firestore {
     match /ridePosts/{postId} {
       allow create: if isDriverCreatingOwnRide(request.resource.data) && isValidRidePostCreate(request.resource.data);
       allow read: if isAuthenticated();
-      allow update: if isBackend() && isValidRidePostUpdate(request.resource.data);
+      allow update: if (
+        (isBackend() && isValidBackendRideUpdate(request.resource.data)) ||
+        isValidDriverRideUpdate(request.resource.data) ||
+        // Hackathon: allow authenticated users to update only seatsAvailable and updatedAt for demo flows
+        (
+          isAuthenticated() &&
+          resource.data.status == 'open' &&
+          // Hackathon MVP: allow atomic seat adjustments by any authed client
+          request.resource.data.diff(resource.data).changedKeys().hasOnly(['seatsAvailable','updatedAt']) &&
+          request.resource.data.seatsAvailable is int &&
+          request.resource.data.seatsAvailable >= 0 &&
+          request.resource.data.seatsAvailable <= resource.data.seatsTotal &&
+          // allow small bursts (e.g., accepting multiple riders) within [-2, +2]
+          (request.resource.data.seatsAvailable - resource.data.seatsAvailable) >= -2 &&
+          (request.resource.data.seatsAvailable - resource.data.seatsAvailable) <= 2
+        )
+      );
       allow delete: if isBackend();
+    }
+
+    // Hackathon MVP rules for rideRequests, holds, bookings
+    function isRider(data) {
+      return isAuthenticated() && data.riderId is string && request.auth.uid == data.riderId;
+    }
+
+    match /rideRequests/{requestId} {
+      // Hackathon MVP: allow authenticated creates; prefer rider-only in prod
+      allow create: if isAuthenticated();
+      allow read: if isAuthenticated() && (
+        isRider(resource.data) ||
+        // allow drivers to read requests for their posts (MVP relaxed check via provided postId)
+        (resource.data.postId is string &&
+          exists(/databases/$(database)/documents/ridePosts/$(resource.data.postId)) &&
+          get(/databases/$(database)/documents/ridePosts/$(resource.data.postId)).data.driverId == request.auth.uid)
+      );
+      allow update, delete: if isAuthenticated();
+    }
+
+    match /holds/{holdId} {
+      allow create: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow update: if isAuthenticated();
+    }
+
+    match /bookings/{bookingId} {
+      allow create: if isAuthenticated(); // MVP
+      allow read: if isAuthenticated();
+      allow update: if isAuthenticated();
+    }
+
+    match /users/{uid} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && request.auth.uid == uid;
     }
   }
 }

@@ -15,10 +15,11 @@ import { getFirestoreDb } from '../firebase';
 export type RidePostStatus = 'open' | 'expired' | 'canceled' | 'inTrip';
 
 export interface RidePostOrigin {
-  lat: number;
-  lng: number;
+  lat: number | null;
+  lng: number | null;
   label: string;
   geohash: string;
+  precision: 'exact' | 'approximate';
 }
 
 export interface RidePostDocument {
@@ -37,9 +38,10 @@ export interface RidePostDocument {
 export interface RidePostCreateInput {
   driverId: string;
   origin: {
-    lat: number;
-    lng: number;
+    lat: number | null;
+    lng: number | null;
     label: string;
+    precision: RidePostOrigin['precision'];
   };
   destinationCampus: string;
   seatsTotal: number;
@@ -74,7 +76,17 @@ const LATITUDE_MAX = 90;
 const LONGITUDE_MIN = -180;
 const LONGITUDE_MAX = 180;
 
-const validateLatLng = (lat: number, lng: number) => {
+const validateLatLng = (lat: number | null, lng: number | null, precision: RidePostOrigin['precision']) => {
+  if (precision === 'approximate') {
+    if (lat === null || lng === null) {
+      return;
+    }
+  }
+
+  if (lat === null || lng === null) {
+    throw new Error('Origin coordinates required for precise locations');
+  }
+
   if (Number.isNaN(lat) || Number.isNaN(lng)) {
     throw new Error('Origin coordinates must be valid numbers');
   }
@@ -131,14 +143,14 @@ export const buildRidePostCreateData = ({
     throw new Error('origin.label is required');
   }
 
-  validateLatLng(origin.lat, origin.lng);
+  validateLatLng(origin.lat, origin.lng, origin.precision);
   validateTimeWindow(windowStart, windowEnd);
 
   const totalSeats = seatsTotal;
   const availableSeats = seatsAvailable ?? seatsTotal;
   validateSeats(totalSeats, availableSeats);
 
-  const geohash = ngeohash.encode(origin.lat, origin.lng);
+  const geohash = origin.lat !== null && origin.lng !== null ? ngeohash.encode(origin.lat, origin.lng) : 'manual';
 
   return {
     driverId,
@@ -146,7 +158,8 @@ export const buildRidePostCreateData = ({
       lat: origin.lat,
       lng: origin.lng,
       label: origin.label,
-      geohash
+      geohash,
+      precision: origin.precision
     },
     destinationCampus,
     seatsTotal: totalSeats,
