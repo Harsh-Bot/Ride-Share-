@@ -4,7 +4,7 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testPathIgnorePatterns: ['/node_modules/', '/android/', '/ios/', '/.expo/', '/playwright/'],
   transformIgnorePatterns: [
-    'node_modules/(?!(jest-)?react-native|@react-native|@react-navigation|expo(|-.*)|@expo(|-.*)|@unimodules|@react-native-community|@react-native-picker|@sentry|@tanstack)'
+    'node_modules/(?!(jest-)?react-native|@react-native|@react-navigation|expo(|-.*)|@expo(|-.*)|@unimodules|@react-native-community|@react-native-picker|@sentry|@tanstack|firebase(|-.*)|@firebase(|-.*))'
   ],
   collectCoverage: true,
   collectCoverageFrom: [
