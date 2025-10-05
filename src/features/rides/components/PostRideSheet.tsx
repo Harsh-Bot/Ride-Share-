@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useReducer, useState } from 'react';
-import type { Reducer } from 'react';
 import {
   Modal,
   View,
@@ -57,11 +56,7 @@ const PostRideSheet = ({
   onSubmit,
   locationService = DEFAULT_LOCATION_SERVICE
 }: PostRideSheetProps) => {
-  const [state, dispatch] = useReducer<Reducer<PostRideFormState, PostRideFormAction>>(
-    postRideFormReducer,
-    undefined,
-    buildInitialPostRideFormState
-  );
+  const [state, dispatch] = useReducer(postRideFormReducer, buildInitialPostRideFormState());
   const [errors, setErrors] = useState<PostRideFormErrors>({});
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 

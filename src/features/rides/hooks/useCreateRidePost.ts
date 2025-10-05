@@ -219,7 +219,7 @@ export const useCreateRidePost = ({
   createRidePostFn = firestoreCreateRidePost,
   subscribeToRidePostFn = firestoreSubscribeToRidePost
 }: UseCreateRidePostOptions): UseCreateRidePostResult => {
-  const controllerRef = useRef<RidePostController>();
+  const controllerRef = useRef<RidePostController | null>(null);
 
   if (!controllerRef.current) {
     controllerRef.current = new RidePostController({
@@ -229,7 +229,7 @@ export const useCreateRidePost = ({
     });
   }
 
-  const controller = controllerRef.current;
+  const controller = controllerRef.current!;
   const [state, setState] = useState<RidePostControllerState>(controller.getState());
 
   useEffect(() => {
@@ -241,7 +241,7 @@ export const useCreateRidePost = ({
     return () => {
       unsubscribe();
       controller.dispose();
-      controllerRef.current = undefined;
+      controllerRef.current = null;
     };
   }, [controller]);
 

@@ -42,7 +42,7 @@ const MyRidesScreen = () => {
                 Alert.alert('Request canceled');
               }}
             >
-              <Text style={styles.btnText}>Cancel</Text>
+              <Text style={styles.btnText}>Cancel Request</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -60,7 +60,7 @@ const MyRidesScreen = () => {
                 Alert.alert('Booking canceled');
               }}
             >
-              <Text style={styles.btnText}>Cancel</Text>
+              <Text style={styles.btnText}>Cancel Booking</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -79,4 +79,3 @@ const styles = StyleSheet.create({
 });
 
 export default MyRidesScreen;
-

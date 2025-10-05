@@ -1,16 +1,7 @@
-import {
-  collection,
-  doc,
-  Firestore,
-  getDoc,
-  runTransaction,
-  serverTimestamp,
-  setDoc,
-  Timestamp,
-  updateDoc
-} from 'firebase/firestore';
+import { collection, doc, Firestore, getDoc, runTransaction, serverTimestamp, setDoc, Timestamp, updateDoc } from 'firebase/firestore';
 import { getFirestoreDb } from '../../../services/firebase';
 import { collection as col, query, where, getDocs } from 'firebase/firestore';
+import { geodesicDistanceMeters } from '../../../utils/geo';
 
 type Campus = 'Burnaby' | 'Surrey' | 'burnaby' | 'surrey';
 
@@ -67,7 +58,9 @@ type RequestRideParams = {
   seats?: number;
   now?: () => number;
   db?: Firestore;
+  radiusMeters?: number; // optional geofence radius to validate pickup is within ride zone
 };
+
 
 export const requestRide = async ({
   postId,
@@ -76,7 +69,8 @@ export const requestRide = async ({
   pickup,
   seats = 1,
   now = Date.now,
-  db = getFirestoreDb()
+  db = getFirestoreDb(),
+  radiusMeters
 }: RequestRideParams) => {
   const rideRequests = getRideRequestsCol(db);
   const holds = getHoldsCol(db);
@@ -87,7 +81,9 @@ export const requestRide = async ({
   const bookingRef = doc(bookings);
   const postRef = doc(db, 'ridePosts', postId);
 
-  // one-active rule (MVP, outside tx): auto-cancel pending requests for same campus
+  // one-active rule (MVP, outside tx): auto-cancel previous pending requests for same campus
+  // Track if any canceled pending belonged to the same post so we can avoid double-decrementing the seat.
+  let canceledOnSamePost = false;
   try {
     const pendingQ = query(
       getRideRequestsCol(db),
@@ -97,6 +93,8 @@ export const requestRide = async ({
     );
     const pendingSnap = await getDocs(pendingQ);
     for (const docSnap of pendingSnap.docs) {
+      const d = docSnap.data() as Partial<RequestDoc> | undefined;
+      if (d?.postId === postId) canceledOnSamePost = true;
       await cancelRequest(docSnap.id, { db });
     }
   } catch {}
@@ -112,16 +110,34 @@ export const requestRide = async ({
 
     if ((post.seatsAvailable ?? 0) < seats) throw new Error('NO_SEATS');
 
+    // Geofence validation: if radiusMeters provided and post has precise origin, require pickup within radius
+    if (radiusMeters && typeof post?.origin?.lat === 'number' && typeof post?.origin?.lng === 'number') {
+      const center = { lat: post.origin.lat as number, lng: post.origin.lng as number };
+      const dist = geodesicDistanceMeters(center, { lat: pickup.lat, lng: pickup.lng });
+      if (Number.isFinite(dist) && dist > radiusMeters) {
+        throw new Error('OUT_OF_RADIUS');
+      }
+    }
+
     const createdAt = Timestamp.fromMillis(now());
     const expiresAt = Timestamp.fromMillis(now() + 10 * 60_000);
 
-    // read driver settings BEFORE any writes (transaction constraint)
-    const userRef = doc(db, 'users', post.driverId ?? '');
-    const driverSettingsSnap = post.driverId ? await tx.get(userRef) : null;
+    // read driver/rider settings BEFORE any writes (transaction constraint)
+    const driverRef = doc(db, 'users', post.driverId ?? '');
+    const riderRef = doc(db, 'users', riderId ?? '');
+    const [driverSettingsSnap, riderSnap] = await Promise.all([
+      post.driverId ? tx.get(driverRef) : Promise.resolve(null as any),
+      riderId ? tx.get(riderRef) : Promise.resolve(null as any)
+    ]);
     const autoAccept = driverSettingsSnap?.exists() ? !!driverSettingsSnap.data()?.settings?.autoAccept : false;
+    const noShows7d = riderSnap?.exists() ? Number(riderSnap.data()?.stats?.noShows7d ?? 0) : 0;
+    const effectiveAutoAccept = autoAccept && noShows7d <= 2;
 
-    // decrement seats
-    tx.update(postRef, { seatsAvailable: (post.seatsAvailable ?? 0) - seats, updatedAt: serverTimestamp() });
+    // decrement seats unless we just canceled a pending on the same post (replacement),
+    // in which case the previous hold already accounted for the seat.
+    if (!canceledOnSamePost) {
+      tx.update(postRef, { seatsAvailable: (post.seatsAvailable ?? 0) - seats, updatedAt: serverTimestamp() });
+    }
 
     // create request
     tx.set(requestRef, {
@@ -136,6 +152,17 @@ export const requestRide = async ({
       expiresAt
     } as RequestDoc);
 
+    // notify driver about new request
+    try {
+      const notifRef = doc(collection(db, 'notifications'));
+      tx.set(notifRef, {
+        userId: post.driverId,
+        type: 'request_created',
+        data: { requestId: requestRef.id, postId, riderId },
+        createdAt
+      } as any);
+    } catch {}
+
     // create hold
     tx.set(holdRef, {
       postId,
@@ -146,7 +173,7 @@ export const requestRide = async ({
       createdAt,
       expiresAt
     } as HoldDoc);
-    if (autoAccept) {
+    if (effectiveAutoAccept) {
       tx.set(bookingRef, {
         postId,
         riderId,
@@ -160,6 +187,26 @@ export const requestRide = async ({
       } as BookingDoc);
       tx.update(requestRef, { status: 'booked', autoAccepted: true, bookingId: bookingRef.id } as Partial<RequestDoc>);
       tx.update(holdRef, { state: 'consumed' } as Partial<HoldDoc>);
+
+      // booking confirmed notification and chat thread
+      try {
+        const notifRef = doc(collection(db, 'notifications'));
+        tx.set(notifRef, {
+          userId: riderId,
+          type: 'booking_confirmed',
+          data: { bookingId: bookingRef.id, postId, driverId: post.driverId },
+          createdAt
+        } as any);
+      } catch {}
+
+      try {
+        const chatRef = doc(collection(db, 'chatThreads'), bookingRef.id);
+        tx.set(chatRef, {
+          bookingId: bookingRef.id,
+          participants: [post.driverId, riderId],
+          createdAt
+        } as any);
+      } catch {}
     }
   });
 
@@ -201,6 +248,21 @@ export const acceptRequest = async (
     } as BookingDoc);
     tx.update(requestRef, { status: 'booked', bookingId: bookingRef.id } as Partial<RequestDoc>);
     // mark hold consumed best-effort outside tx
+
+    // booking confirmed notification and chat thread
+    try {
+      const notifRef = doc(collection(db, 'notifications'));
+      tx.set(notifRef, {
+        userId: req.riderId,
+        type: 'booking_confirmed',
+        data: { bookingId: bookingRef.id, postId: req.postId, driverId: post.driverId },
+        createdAt: serverTimestamp()
+      } as any);
+    } catch {}
+    try {
+      const chatRef = doc(collection(db, 'chatThreads'), bookingRef.id);
+      tx.set(chatRef, { bookingId: bookingRef.id, participants: [post.driverId, req.riderId], createdAt: serverTimestamp() } as any);
+    } catch {}
   });
 };
 
@@ -241,6 +303,16 @@ export const cancelRequest = async (
     if (postSnap.exists()) {
       const post = postSnap.data() as any;
       tx.update(postRef, { seatsAvailable: (post.seatsAvailable ?? 0) + 1, updatedAt: serverTimestamp() });
+      // notify driver that rider canceled a pending request
+      try {
+        const notifRef = doc(collection(db, 'notifications'));
+        tx.set(notifRef, {
+          userId: post.driverId,
+          type: 'rider_canceled_request',
+          data: { requestId, postId: req.postId, riderId: req.riderId },
+          createdAt: serverTimestamp()
+        } as any);
+      } catch {}
     }
     tx.update(requestRef, { status: 'canceled' } as Partial<RequestDoc>);
   });
@@ -263,6 +335,16 @@ export const cancelBooking = async (
       tx.update(postRef, { seatsAvailable: (post.seatsAvailable ?? 0) + (booking.seats ?? 1), updatedAt: serverTimestamp() });
     }
     tx.update(bookingRef, { status: 'canceled' } as Partial<BookingDoc>);
+    // notify driver that rider canceled a booking
+    try {
+      const notifRef = doc(collection(db, 'notifications'));
+      tx.set(notifRef, {
+        userId: booking.driverId,
+        type: 'rider_canceled_booking',
+        data: { bookingId, postId: booking.postId, riderId: booking.riderId },
+        createdAt: serverTimestamp()
+      } as any);
+    } catch {}
   });
 };
 
@@ -291,5 +373,16 @@ export const expireRequestIfNeeded = async (
       tx.update(postRef, { seatsAvailable: (post.seatsAvailable ?? 0) + 1, updatedAt: serverTimestamp() });
     }
     tx.update(requestRef, { status: 'expired' } as Partial<RequestDoc>);
+
+    // notify rider about expiry
+    try {
+      const notifRef = doc(collection(db, 'notifications'));
+      tx.set(notifRef, {
+        userId: req.riderId,
+        type: 'request_expired',
+        data: { requestId, postId: req.postId, message: 'Request expired. Seat released.' },
+        createdAt: serverTimestamp()
+      } as any);
+    } catch {}
   });
 };

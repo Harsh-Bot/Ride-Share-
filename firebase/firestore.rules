@@ -60,7 +60,12 @@ service cloud.firestore {
           'windowEnd',
           'status',
           'createdAt',
-          'updatedAt'
+          'updatedAt',
+          // optional fields for matching
+          'geohash',
+          'driverReliability',
+          'driverRating',
+          'originGeoPoint'
         ]) &&
         data.driverId is string && data.driverId.size() > 0 &&
         data.destinationCampus is string && data.destinationCampus.size() > 0 &&
@@ -69,7 +74,20 @@ service cloud.firestore {
         data.seatsAvailable is int && data.seatsAvailable >= 0 && data.seatsAvailable <= data.seatsTotal &&
         data.windowStart is timestamp &&
         data.windowEnd is timestamp && data.windowEnd > data.windowStart &&
-        data.status is string && listContains(['open', 'expired', 'canceled', 'inTrip'], data.status);
+        data.status is string && listContains(['open', 'expired', 'canceled', 'inTrip'], data.status) &&
+        // optional matching fields validation when present
+        (
+          (!data.keys().hasAny(['geohash'])) || (data.geohash is string && data.geohash.size() > 0)
+        ) &&
+        (
+          (!data.keys().hasAny(['driverReliability'])) || (data.driverReliability is number && data.driverReliability >= 0 && data.driverReliability <= 1)
+        ) &&
+        (
+          (!data.keys().hasAny(['driverRating'])) || (data.driverRating is number && data.driverRating >= 0 && data.driverRating <= 5)
+        ) &&
+        (
+          (!data.keys().hasAny(['originGeoPoint'])) || (data.originGeoPoint is latlng)
+        );
     }
 
     function isValidRidePostCreate(data) {
@@ -156,6 +174,11 @@ service cloud.firestore {
       allow create: if isAuthenticated(); // MVP
       allow read: if isAuthenticated();
       allow update: if isAuthenticated();
+    }
+
+    // Ephemeral cache for top matches, doc id = riderId
+    match /matches/{riderId} {
+      allow read, create, update, delete: if isAuthenticated() && request.auth.uid == riderId;
     }
 
     match /users/{uid} {

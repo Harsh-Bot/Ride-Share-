@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ScrollView, Text, StyleSheet, View, TouchableOpacity, Alert } from 'react-native';
+import { ScrollView, Text, StyleSheet, View, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import RideCard from '../components/RideCard';
 import PostRideSheet from '../components/PostRideSheet';
 import { useRoleStore } from '../../../store/useRoleStore';
@@ -7,6 +7,7 @@ import { useDriverStateStore } from '../../../store/useDriverStateStore';
 import { shouldShowDriverPostCta } from '../utils/driverEligibility';
 import { useCreateRidePost } from '../hooks/useCreateRidePost';
 import type { PostRideSubmitPayload } from '../types/postRide';
+import { useRideFeed } from '../hooks/useRideFeed';
 
 const LiveRidesScreen = () => {
   const { role } = useRoleStore();
@@ -18,6 +19,7 @@ const LiveRidesScreen = () => {
   });
 
   const showPostRide = shouldShowDriverPostCta(role, hasActiveTrip);
+  const feed = useRideFeed();
 
   useEffect(() => {
     if (error) {
@@ -33,12 +35,16 @@ const LiveRidesScreen = () => {
 
   return (
     <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={styles.container} refreshControl={<RefreshControl refreshing={feed.refreshing} onRefresh={feed.refresh} />}>
         <Text style={styles.title}>Live Ride Exchange</Text>
-        <Text style={styles.body}>
-          TODO: List active drivers, nearby matches, and allow real-time ride requests.
-        </Text>
-        <RideCard title="Sample ride" subtitle="Driver name • Burnaby → Surrey" meta="Seats left: TBD" />
+        {feed.offline && (
+          <View style={styles.noticeBanner}>
+            <Text style={styles.noticeText}>Offline. Showing cached rides.</Text>
+          </View>
+        )}
+        {feed.items.map((it) => (
+          <RideCard key={it.id} title={`To ${it.destinationCampus}`} subtitle={`Seats left: ${it.seatsAvailable}`} meta={it.isStale ? 'Stale' : 'Live'} />
+        ))}
       </ScrollView>
       {role === 'driver' && hasActiveTrip && (
         <View style={styles.noticeBanner}>

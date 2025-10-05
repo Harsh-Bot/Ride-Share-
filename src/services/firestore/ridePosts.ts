@@ -1,15 +1,5 @@
 import ngeohash from 'ngeohash';
-import {
-  collection,
-  CollectionReference,
-  doc,
-  DocumentReference,
-  Firestore,
-  serverTimestamp,
-  Timestamp,
-  WithFieldValue,
-  PartialWithFieldValue
-} from 'firebase/firestore';
+import { collection, CollectionReference, doc, DocumentReference, Firestore, serverTimestamp, Timestamp, WithFieldValue, PartialWithFieldValue, GeoPoint } from 'firebase/firestore';
 import { getFirestoreDb } from '../firebase';
 
 export type RidePostStatus = 'open' | 'expired' | 'canceled' | 'inTrip';
@@ -30,6 +20,10 @@ export interface RidePostDocument {
   seatsAvailable: number;
   windowStart: Timestamp;
   windowEnd: Timestamp;
+  geohash: string; // duplicate for query indexes
+  driverReliability?: number; // 0..1 optional
+  driverRating?: number; // 0..5 optional
+  originGeoPoint?: GeoPoint; // for geo queries/maps
   status: RidePostStatus;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -48,6 +42,8 @@ export interface RidePostCreateInput {
   windowStart: Timestamp;
   windowEnd: Timestamp;
   seatsAvailable?: number;
+  driverReliability?: number;
+  driverRating?: number;
 }
 
 export interface RidePostStatusUpdateInput {
@@ -131,7 +127,9 @@ export const buildRidePostCreateData = ({
   seatsTotal,
   windowStart,
   windowEnd,
-  seatsAvailable
+  seatsAvailable,
+  driverReliability: inputDriverReliability,
+  driverRating: inputDriverRating
 }: RidePostCreateInput): RidePostWriteData => {
   if (!driverId) {
     throw new Error('driverId is required');
@@ -150,9 +148,14 @@ export const buildRidePostCreateData = ({
   const availableSeats = seatsAvailable ?? seatsTotal;
   validateSeats(totalSeats, availableSeats);
 
-  const geohash = origin.lat !== null && origin.lng !== null ? ngeohash.encode(origin.lat, origin.lng) : 'manual';
+  const GEOHASH_PRECISION = 7; // 6–8 per requirements; 7 is a balanced default
+  const geohash = origin.lat !== null && origin.lng !== null ? ngeohash.encode(origin.lat, origin.lng, GEOHASH_PRECISION) : 'manual';
 
-  return {
+  // optional quality metrics validation (soft constraints)
+  const driverReliability = typeof inputDriverReliability === 'number' ? Math.max(0, Math.min(1, inputDriverReliability)) : undefined;
+  const driverRating = typeof inputDriverRating === 'number' ? Math.max(0, Math.min(5, inputDriverRating)) : undefined;
+
+  const base: any = {
     driverId,
     origin: {
       lat: origin.lat,
@@ -166,10 +169,15 @@ export const buildRidePostCreateData = ({
     seatsAvailable: availableSeats,
     windowStart,
     windowEnd,
+    geohash,
     status: 'open',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   };
+  if (driverReliability !== undefined) base.driverReliability = driverReliability;
+  if (driverRating !== undefined) base.driverRating = driverRating;
+  if (origin.lat !== null && origin.lng !== null) base.originGeoPoint = new GeoPoint(origin.lat, origin.lng);
+  return base;
 };
 
 export const buildRidePostStatusUpdate = ({
