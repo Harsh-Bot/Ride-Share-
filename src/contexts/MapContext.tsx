@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { Platform } from 'react-native';
 import type * as Location from 'expo-location';
 
 import { loadGoogleMapsSdk } from '../services/maps/googleMapsLoader';
@@ -85,6 +86,15 @@ export const MapProvider = ({ children }: { children: ReactNode }) => {
       if (process.env.JEST_WORKER_ID) {
         setStatus('ready');
         setGoogleMaps({} as GoogleMapsApi);
+        return;
+      }
+
+      if (Platform.OS !== 'web') {
+        setStatus('ready');
+        setGoogleMaps(null);
+        setError(null);
+
+        await refreshLocation({ suppressError: true });
         return;
       }
 
