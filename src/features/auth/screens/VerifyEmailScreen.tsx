@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../../navigation/types';
 import { useAuth } from '../../../hooks/useAuth';
@@ -6,20 +7,49 @@ import { useAuth } from '../../../hooks/useAuth';
 type Props = NativeStackScreenProps<AuthStackParamList, 'VerifyEmail'>;
 
 const VerifyEmailScreen = ({ route }: Props) => {
-  const { completeSignIn } = useAuth();
-  const email = route.params?.email ?? '';
+  const { completeSignIn, authError, isLoading, pendingEmail } = useAuth();
+  const [code, setCode] = useState('');
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  const handleRefreshSession = async () => {
-    // TODO: Use inbound dynamic link or OTP entry to complete auth
-    await completeSignIn('');
+  const email = route.params?.email ?? pendingEmail ?? '';
+
+  const handleCodeSubmit = async () => {
+    setLocalError(null);
+    try {
+      await completeSignIn(code);
+    } catch (error) {
+      setLocalError((error as Error).message);
+    }
   };
+
+  const message = localError ?? authError;
+  const isCodeValid = code.trim().length === 6;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Check your inbox</Text>
-      <Text style={styles.body}>We sent a magic link to {email || 'your email'}. Tap it on this device to continue.</Text>
-      <TouchableOpacity style={styles.secondary} onPress={handleRefreshSession}>
-        <Text style={styles.secondaryText}>I already clicked the link</Text>
+      <Text style={styles.title}>Enter your verification code</Text>
+      <Text style={styles.body}>We sent a 6-digit code to {email || 'your SFU email'}. Enter it below to continue.</Text>
+      <TextInput
+        style={styles.input}
+        value={code}
+        onChangeText={(value) => {
+          setCode(value.replace(/[^0-9]/g, ''));
+          if (localError) {
+            setLocalError(null);
+          }
+        }}
+        placeholder="000000"
+        keyboardType="number-pad"
+        maxLength={6}
+        textContentType="oneTimeCode"
+      />
+      {message ? <Text style={styles.error}>{message}</Text> : null}
+      <TouchableOpacity
+        style={[styles.cta, (!isCodeValid || isLoading) && styles.ctaDisabled]}
+        onPress={handleCodeSubmit}
+        disabled={!isCodeValid || isLoading}
+      >
+        <Text style={styles.ctaText}>{isLoading ? 'Verifying…' : 'Verify and continue'}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -40,12 +70,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 24
   },
-  secondary: {
+  input: {
+    borderWidth: 1,
+    borderColor: '#CCCCCC',
+    borderRadius: 12,
     padding: 16,
+    fontSize: 20,
+    letterSpacing: 8,
+    textAlign: 'center',
+    marginBottom: 16
+  },
+  error: {
+    color: '#B91C1C',
+    marginBottom: 16,
+    textAlign: 'center'
+  },
+  cta: {
+    backgroundColor: '#D4145A',
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center'
   },
-  secondaryText: {
-    color: '#D4145A',
+  ctaDisabled: {
+    opacity: 0.6
+  },
+  ctaText: {
+    color: '#FFFFFF',
     fontWeight: '600'
   }
 });

@@ -1,7 +1,9 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ImageSourcePropType } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../../navigation/types';
-import illustration from '../../../../assets/welcome-illustration.png';
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const illustration: ImageSourcePropType = require('../../../../assets/images/welcome-illustration.png');
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Welcome'>;
 
