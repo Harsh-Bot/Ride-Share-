@@ -124,7 +124,7 @@ const SignInScreen = ({ navigation }: Props) => {
         accessibilityRole="button"
         accessibilityLabel="Send sign-in code"
       >
-        <Text style={styles.ctaText}>Send magic link</Text>
+        <Text style={styles.ctaText}>Send verification code</Text>
       </TouchableOpacity>
     </KeyboardSafe>
   );
