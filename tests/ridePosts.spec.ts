@@ -26,9 +26,27 @@ import {
 let testEnv: RulesTestEnvironment;
 
 const RULES_PATH = 'firebase/firestore.rules';
-const FIRESTORE_EMULATOR_HOST = process.env.FIRESTORE_EMULATOR_HOST ?? '127.0.0.1:8080';
-const [FIRESTORE_HOST, FIRESTORE_PORT_RAW] = FIRESTORE_EMULATOR_HOST.split(':');
-const FIRESTORE_PORT = Number(FIRESTORE_PORT_RAW ?? 8080);
+const DEFAULT_FIRESTORE_HOST = '127.0.0.1';
+const DEFAULT_FIRESTORE_PORT = 8080;
+const emulatorHostSetting = process.env.FIRESTORE_EMULATOR_HOST ?? '';
+
+const parseEmulatorHost = (raw: string) => {
+  let host = DEFAULT_FIRESTORE_HOST;
+  let port = DEFAULT_FIRESTORE_PORT;
+  if (raw.includes(':')) {
+    const [maybeHost, maybePort] = raw.split(':', 2);
+    host = maybeHost || DEFAULT_FIRESTORE_HOST;
+    const parsedPort = Number(maybePort);
+    if (Number.isFinite(parsedPort) && parsedPort > 0) {
+      port = parsedPort;
+    }
+  } else if (raw.trim()) {
+    host = raw.trim();
+  }
+  return { host, port };
+};
+
+const { host: FIRESTORE_HOST, port: FIRESTORE_PORT } = parseEmulatorHost(emulatorHostSetting);
 
 const loadFile = (path: string) => readFileSync(path, 'utf8');
 
