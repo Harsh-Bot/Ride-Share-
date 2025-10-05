@@ -47,9 +47,7 @@ export const getCachedLocation = async (
 
   try {
     const location = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Balanced,
-      maximumAge: cacheTtlMs,
-      timeInterval: 5_000
+      accuracy: Location.Accuracy.Balanced
     });
 
     cachedLocation = location;

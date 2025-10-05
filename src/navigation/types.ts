@@ -21,11 +21,9 @@ export type RideTabParams = {
 };
 
 export type MainTabParamList = {
-  Dashboard: undefined;
-  LiveRides: undefined;
-  MyRides: undefined;
-  ScheduledRides: undefined;
-  DriverConsole: undefined;
+  Home: undefined;
+  LiveRides: RideTabParams | undefined;
+  ScheduledRides: RideTabParams | undefined;
   Chat: undefined;
   Profile: undefined;
 };

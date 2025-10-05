@@ -79,7 +79,8 @@ const loadScript = (src: string): Promise<typeof google.maps> =>
     script.addEventListener('load', handleLoad, { once: true });
     script.addEventListener('error', handleError, { once: true });
 
-    if (script.readyState === 'complete') {
+    const maybeReadyScript = script as HTMLScriptElement & { readyState?: string };
+    if (maybeReadyScript.readyState === 'complete') {
       handleLoad();
     }
   });
