@@ -1,6 +1,14 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
-import KeyboardSafe from '../../../components/layout/KeyboardSafe';
+import { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView
+} from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../../navigation/types';
 import { useAuth } from '../../../hooks/useAuth';
@@ -9,12 +17,27 @@ import { useProfileStore, GenderOption } from '../../../store/useProfileStore';
 type Props = NativeStackScreenProps<AuthStackParamList, 'SignIn'>;
 
 const SignInScreen = ({ navigation }: Props) => {
-  const { initiateSignIn, authError, pendingEmail } = useAuth();
+  const { initiateSignIn, isSendingLink, resetError, authError, pendingEmail } = useAuth();
   const { setNickname, setGender } = useProfileStore((state) => ({
     setNickname: state.setNickname,
     setGender: state.setGender
   }));
-  const [email, setEmail] = useState(pendingEmail ?? '');
+  const [email, setEmail] = useState(pendingEmail ?? pendingEmail ?? '');
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (pendingEmail) {
+      setEmail(pendingEmail);
+    }
+  }, [pendingEmail]);
+
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    setLocalError(null);
+    if (error) {
+      resetError();
+    }
+  };
   const [nickname, setNicknameLocal] = useState('');
   const [gender, setGenderLocal] = useState<GenderOption | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +45,14 @@ const SignInScreen = ({ navigation }: Props) => {
   const [genderError, setGenderError] = useState<string | null>(null);
 
   const handleContinue = async () => {
-    const trimmedNickname = nickname.trim();
+    const trimmed = email.trim();
+    if (!trimmed) {
+      setLocalError('Enter your SFU email address');
+      return;
+    }
+
+    try {
+      const trimmedNickname = nickname.trim();
     if (trimmedNickname.length < 2 || trimmedNickname.length > 20) {
       setNicknameError('Nickname must be between 2 and 20 characters.');
       return;
@@ -38,101 +68,69 @@ const SignInScreen = ({ navigation }: Props) => {
       setGenderError(null);
       setNickname(trimmedNickname);
       setGender(gender);
-      await initiateSignIn(email);
-      navigation.navigate('VerifyEmail', { email });
+      await initiateSignIn(trimmed);
+        navigation.navigate('VerifyEmail', { email: trimmed });
     } catch (err) {
       setError((err as Error).message);
     }
+    } catch (sendError) {
+      // Errors are surfaced via toast; keep local state for inline messaging if needed.
+      setLocalError((sendError as Error)?.message ?? null);
+    }
   };
+
+  const activeError = localError ?? error;
 
   const message = error ?? authError;
 
   return (
-    <KeyboardSafe scroll contentContainerStyle={styles.container} testID="KeyboardSafe.SignIn">
-      <Text style={styles.title}>Verify your SFU email</Text>
-      <Text style={styles.description}>
-        Share a nickname, pick a gender preference, and enter your @sfu.ca email to receive a sign-in code.
-      </Text>
-      <View style={styles.formGroup}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={64}
+    >
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.title}>Verify your SFU email</Text>
+        <Text style={styles.description}>Enter your @sfu.ca email to receive a passwordless sign-in link.</Text>
         <TextInput
           style={styles.input}
-          placeholder="Nickname"
-          value={nickname}
-          onChangeText={(value) => {
-            setNicknameLocal(value);
-            if (nicknameError) {
-              setNicknameError(null);
-            }
-          }}
-          maxLength={20}
-          autoCapitalize="words"
-          accessibilityLabel="Enter a nickname"
+          placeholder="name@sfu.ca"
+          value={email}
+          onChangeText={handleEmailChange}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          autoCorrect={false}
+          importantForAutofill="yes"
+          textContentType="emailAddress"
+          testID="auth-email-input"
         />
-        {nicknameError ? <Text style={styles.error}>{nicknameError}</Text> : null}
-      </View>
-      <View style={styles.formGroup}>
-        <Text style={styles.segmentLabel}>Gender</Text>
-        <View style={styles.segmentRow}>
-          {(
-            [
-              { id: 'male', label: 'Male' },
-              { id: 'female', label: 'Female' },
-              { id: 'na', label: 'Rather not say' }
-            ] as const
-          ).map((option) => (
-            <TouchableOpacity
-              key={option.id}
-              style={[styles.segmentButton, gender === option.id && styles.segmentButtonActive]}
-              onPress={() => {
-                setGenderLocal(option.id);
-                if (genderError) {
-                  setGenderError(null);
-                }
-              }}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: gender === option.id }}
-              accessibilityLabel={`Gender ${option.label}`}
-            >
-              <Text
-                style={[styles.segmentButtonText, gender === option.id && styles.segmentButtonTextActive]}
-              >
-                {option.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        {genderError ? <Text style={styles.error}>{genderError}</Text> : null}
-      </View>
-      <TextInput
-        style={styles.input}
-        placeholder="name@sfu.ca"
-        value={email}
-        onChangeText={(value) => {
-          setEmail(value);
-          if (error) {
-            setError(null);
-          }
-        }}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        accessibilityLabel="Enter your SFU email"
-      />
-      {message ? <Text style={styles.error}>{message}</Text> : null}
-      <TouchableOpacity
-        style={styles.cta}
-        onPress={handleContinue}
-        accessibilityRole="button"
-        accessibilityLabel="Send sign-in code"
-      >
-        <Text style={styles.ctaText}>Send verification code</Text>
-      </TouchableOpacity>
-    </KeyboardSafe>
+        {activeError ? <Text style={styles.errorText}>{activeError}</Text> : null}
+        <TouchableOpacity
+          style={[styles.cta, isSendingLink ? styles.ctaDisabled : null]}
+          onPress={handleContinue}
+          disabled={isSendingLink}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: isSendingLink }}
+          testID="auth-send-link-button"
+        >
+          <Text style={styles.ctaText}>{isSendingLink ? 'Sending link…' : 'Send magic link'}</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#FFFFFF'
+  },
+  content: {
+    flexGrow: 1,
     padding: 24,
     justifyContent: 'center'
   },
@@ -154,6 +152,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 16
+  },
+  errorText: {
+    color: '#C62828',
+    marginBottom: 12
   },
   segmentLabel: {
     fontSize: 16,
@@ -194,6 +196,9 @@ const styles = StyleSheet.create({
   ctaText: {
     color: '#FFFFFF',
     fontWeight: '600'
+  },
+  ctaDisabled: {
+    opacity: 0.6
   },
   error: {
     color: '#B91C1C',
