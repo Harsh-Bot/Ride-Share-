@@ -7,23 +7,6 @@
         { "fieldPath": "destinationCampus", "order": "ASCENDING" },
         { "fieldPath": "windowStart", "order": "DESCENDING" }
       ]
-    },
-    {
-      "collectionGroup": "ridePosts",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "destinationCampus", "order": "ASCENDING" },
-        { "fieldPath": "windowStart", "order": "DESCENDING" },
-        { "fieldPath": "geohash", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "ridePosts",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "driverReliability", "order": "DESCENDING" },
-        { "fieldPath": "driverRating", "order": "DESCENDING" }
-      ]
     }
   ],
   "fieldOverrides": [
