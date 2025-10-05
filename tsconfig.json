@@ -6,7 +6,8 @@
     "allowArbitraryExtensions": true,
     "types": [
       "react",
-      "react-native"
+      "react-native",
+      "jest"
     ]
   },
   "include": [

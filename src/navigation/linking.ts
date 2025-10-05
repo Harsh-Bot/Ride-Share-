@@ -17,7 +17,7 @@ export const linkingConfig: LinkingOptions<RootStackParamList> = {
       },
       MainTabs: {
         screens: {
-          Dashboard: 'dashboard',
+          Home: 'home',
           LiveRides: 'rides/live',
           ScheduledRides: 'rides/scheduled',
           Chat: 'chat',

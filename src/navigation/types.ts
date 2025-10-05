@@ -11,10 +11,19 @@ export type AuthStackParamList = {
   VerifyEmail: { email: string } | undefined;
 };
 
+export type RideTabParams = {
+  role: 'driver' | 'rider';
+  origin: string;
+  destination: {
+    id: 'burnaby' | 'surrey';
+    label: string;
+  };
+};
+
 export type MainTabParamList = {
-  Dashboard: undefined;
-  LiveRides: undefined;
-  ScheduledRides: undefined;
+  Home: undefined;
+  LiveRides: RideTabParams | undefined;
+  ScheduledRides: RideTabParams | undefined;
   Chat: undefined;
   Profile: undefined;
 };
