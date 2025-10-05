@@ -2,3 +2,5 @@ node_modules
 .expo/
 /.expo/
 .expo
+test-results/
+playwright-report/
