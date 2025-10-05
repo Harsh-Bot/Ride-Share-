@@ -1,32 +1,76 @@
 # SFU Ride Share (Expo + React Native)
 
 ## Overview
-Skeleton Expo-managed React Native project for the SFU Ride Share hackathon MVP. This initial commit wires up project tooling, navigation shells, context providers, and feature scaffolding for the core requirements (auth, live rides, scheduled rides, chat, incentives, ratings). Implementation hooks are intentionally left as TODOs to unblock rapid feature development during the build sprint.
+Expo-managed React Native app for the SFU Ride Share hackathon MVP. The project now includes a functional Home experience with campus selectors, sign-in profile capture, and comprehensive testing scaffolding (Jest + React Native Testing Library + Playwright) to accelerate future backend integration.
 
 ## Structure
-- `App.tsx` – Global providers, navigation container, and status bar
-- `src/navigation` – Auth stack, main tab navigator, and deep linking config
-- `src/contexts` – Auth + notifications context placeholders
-- `src/features` – Domain modules for auth, rides, chat, incentives, ratings
-- `src/services` – Firebase and API client stubs
-- `src/store` – Zustand role selector placeholder
+- `App.tsx` – Global providers, navigation container, status bar
+- `src/navigation` – Auth stack, main tab navigator, deep linking config
+- `src/features` – Domain modules (auth, rides, chat, incentives, ratings, home)
+- `src/store` – Zustand stores (profile state, role placeholders)
+- `src/services` – Firebase stubs plus API placeholders for profile/maps integrations
 - `src/theme` – Navigation theming + future color mode support
 - `src/utils` – Helpers (e.g., SFU email validation)
+- `playwright` – Web e2e specs (skipped until Expo web server available)
 
-## Getting Started
-1. Install dependencies (requires Node 18+ and npm 9+):
-   ```bash
-   npm install
-   ```
-2. Create a Firebase project and update `src/services/firebase/config.ts`.
-3. Configure Expo App Links & Firebase Dynamic Links for magic-link authentication.
-4. Launch the Expo dev server:
-   ```bash
-   npm run start
-   ```
+## Key Features
+- **Home Tab (formerly “Map”)**
+  - Header illustration (`assets/images/homepage.png`)
+  - Greeting sourced from profile nickname (`Hey, <nickname>!`)
+  - Role toggle (`Driver` / `Rider`) persisted in `useRoleStore`
+  - Free-form origin address input + destination campus selector (Burnaby or Surrey)
+  - Quick actions to LiveRide & ScheduledRides that carry role/origin/destination context downstream (backend TODOs)
+- **Sign-In Enhancements**
+  - Captures nickname (2–20 chars) and gender preference (male/female/rather not say)
+  - Stores profile data in `useProfileStore` (in-memory; AsyncStorage TODO)
+  - Continues existing SFU email verification flow
+- **API Placeholders**
+  - `src/services/api/profile.ts` & `maps.ts` throw explicit TODO errors for backend wiring
 
-## Next Steps
-- Implement Firebase auth flows (magic link, domain enforcement, recent-login checks).
-- Build Firestore data models for live rides, scheduled rides, chat sessions, and ratings.
-- Wire up push notifications, abuse protections, incentive calculations, and admin tooling.
-- Add automated tests and CI checks once features solidify.
+## Testing & Tooling
+- **Unit / Integration**: Jest (via `jest-expo`) + React Native Testing Library
+  - Coverage threshold set to 80%+ in `jest.config.js`
+  - Store, Home, Sign-In, navigation, and API stubs all covered
+- **E2E (Web)**: Playwright specs (`npm run test:e2e` uses `--reporter=list`)
+  - Tests default to `skip` unless `PLAYWRIGHT_BASE_URL` is provided (e.g., Expo web dev server)
+- **CI**: `.github/workflows/test.yml` runs lint, typecheck, Jest, and Playwright suites
+
+## Keyboard Avoidance
+- Use `KeyboardSafe` (`src/components/layout/KeyboardSafe.tsx`) to ensure inputs and primary CTAs remain reachable when the on-screen keyboard opens.
+- Props:
+  - `scroll` — wrap content in a `ScrollView` for long forms (Sign-In uses this)
+  - `keyboardVerticalOffset` — additional offset for iOS headers
+  - `contentContainerStyle` — style for the inner container
+  - `testID` — testing identifier
+- iOS uses `behavior="padding"`; Android uses `behavior="height"`.
+
+## Icons
+- Tab bar icons use Material Icons via `@expo/vector-icons/MaterialIcons`.
+- Current mapping (`src/navigation/MainTabs.tsx`):
+  - Home → `home`
+  - LiveRides → `directions-car`
+  - ScheduledRides → `query-builder`
+  - Chat → `chat`
+  - Profile → `account-box`
+
+## Scripts
+```bash
+npm install        # install dependencies
+npm run start      # launch Expo dev server (Metro)
+npm run lint       # eslint on all TS/TSX files
+npm run typecheck  # strict TypeScript check (no emit)
+npm test           # Jest test suite
+npm run test:ci    # Jest in CI mode
+npm run test:e2e   # Playwright (requires running Expo web; reporter=list)
+```
+
+## Assets
+- `assets/images/homepage.png` – Home tab header illustration
+- `assets/images/logo.png` – App icon/splash
+- `assets/images/welcome-illustration.png` – Welcome screen art
+
+## TODOs / Next Steps
+- Hook profile nickname/gender to backend (Firebase) and persist with AsyncStorage
+- Replace campus selectors with Google Places Autocomplete & directions APIs
+- Pass rider/driver context when navigating to LiveRide/ScheduledRides
+- Flesh out LiveRide/ScheduledRides map experience with Expo Maps / Google Maps SDK

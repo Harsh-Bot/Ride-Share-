@@ -3,9 +3,11 @@
   "compilerOptions": {
     "strict": true,
     "noEmit": true,
+    "allowArbitraryExtensions": true,
     "types": [
       "react",
-      "react-native"
+      "react-native",
+      "jest"
     ]
   },
   "include": [

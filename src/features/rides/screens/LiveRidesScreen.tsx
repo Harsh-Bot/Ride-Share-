@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { ScrollView, Text, StyleSheet, View, TouchableOpacity, Alert, RefreshControl } from 'react-native';
+import { ScrollView, Text, StyleSheet } from 'react-native';
+import { useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import RideCard from '../components/RideCard';
 import PostRideSheet from '../components/PostRideSheet';
 import { useRoleStore } from '../../../store/useRoleStore';
