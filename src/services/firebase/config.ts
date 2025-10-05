@@ -21,7 +21,9 @@ const getEnv = (key: string) => {
 };
 
 const getRequiredConfig = (key: string, fallback?: string) => {
-  const fromEnv = getEnv(`FIREBASE_${toEnvKey(key)}`);
+  const envVarSuffix = toEnvKey(key);
+  const envVarName = `EXPO_PUBLIC_FIREBASE_${envVarSuffix}`;
+  const fromEnv = getEnv(`FIREBASE_${envVarSuffix}`);
   if (fromEnv) {
     return fromEnv;
   }
@@ -34,10 +36,7 @@ const getRequiredConfig = (key: string, fallback?: string) => {
   }
   throw new Error(
     `Missing Firebase configuration value for "${key}". ` +
-      'Set EXPO_PUBLIC_FIREBASE_' +
-      key.toUpperCase() +
-      ' or define expo.extra.firebase.' +
-      key
+      `Set ${envVarName} or define expo.extra.firebase.${key}`
   );
 };
 

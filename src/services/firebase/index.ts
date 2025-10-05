@@ -9,14 +9,17 @@ import {
   setPersistence
 } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
-import { getFirestore } from 'firebase/firestore';
+import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
 import { connectFunctionsEmulator, getFunctions } from 'firebase/functions';
 import { firebaseConfig } from './config';
 
 let appInstance: ReturnType<typeof initializeApp> | null = null;
 let authInstance: Auth | null = null;
 let authEmulatorConfigured = false;
+let firestoreInstance: ReturnType<typeof getFirestore> | null = null;
+let firestoreEmulatorConfigured = false;
 let functionsInstance: ReturnType<typeof getFunctions> | null = null;
 let functionsEmulatorConfigured = false;
 
@@ -35,6 +38,50 @@ const resolveReactNativePersistence = (): ReactNativePersistenceFactory | null =
     cachedNativePersistenceFactory = null;
   }
   return cachedNativePersistenceFactory;
+};
+
+const readEnv = (key: string) => {
+  const value = process.env[key];
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.length > 0) {
+      return trimmed;
+    }
+  }
+  return undefined;
+};
+
+const expoFirebaseExtra = (() => {
+  const expoConfig = Constants?.expoConfig ?? Constants?.manifest;
+  const extra = (expoConfig?.extra ?? {}) as { firebase?: Record<string, unknown> };
+  return (extra.firebase ?? {}) as Record<string, unknown>;
+})();
+
+const readExpoFirebaseExtra = (key: string) => {
+  const value = expoFirebaseExtra[key];
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.length > 0) {
+      return trimmed;
+    }
+  }
+  return undefined;
+};
+
+const readEmulatorSetting = (envKey: string, extraKey: string) =>
+  readEnv(envKey) ?? readEnv(`EXPO_PUBLIC_${envKey}`) ?? readExpoFirebaseExtra(extraKey);
+
+const parseHostAndPort = (value: string, defaultPort: number, source: string) => {
+  try {
+    const url = value.startsWith('http') ? new URL(value) : new URL(`http://${value}`);
+    return {
+      host: url.hostname,
+      port: Number(url.port || defaultPort)
+    };
+  } catch (error) {
+    console.warn(`Invalid emulator host value for ${source}: "${value}"`, error);
+    return null;
+  }
 };
 
 export const getFirebaseApp = () => {
@@ -68,7 +115,7 @@ const createAuthInstance = (app: ReturnType<typeof initializeApp>): Auth => {
 export const getFirebaseAuth = () => {
   if (!authInstance) {
     authInstance = createAuthInstance(getFirebaseApp());
-    const emulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST;
+    const emulatorHost = readEmulatorSetting('FIREBASE_AUTH_EMULATOR_HOST', 'authEmulatorHost');
     if (emulatorHost && !authEmulatorConfigured) {
       const emulatorUrl = emulatorHost.startsWith('http') ? emulatorHost : `http://${emulatorHost}`;
       try {
@@ -84,14 +131,32 @@ export const getFirebaseAuth = () => {
   return authInstance;
 };
 
-export const getFirestoreDb = () => getFirestore(getFirebaseApp());
+export const getFirestoreDb = () => {
+  if (!firestoreInstance) {
+    firestoreInstance = getFirestore(getFirebaseApp());
+  }
+  if (!firestoreEmulatorConfigured) {
+    const host = readEmulatorSetting('FIRESTORE_EMULATOR_HOST', 'firestoreEmulatorHost');
+    if (host) {
+      const parsed = parseHostAndPort(host, 8080, 'FIRESTORE_EMULATOR_HOST');
+      if (parsed) {
+        connectFirestoreEmulator(firestoreInstance, parsed.host, parsed.port);
+      }
+    }
+    firestoreEmulatorConfigured = true;
+  }
+  return firestoreInstance;
+};
+
 export const getFirebaseFunctions = () => {
   if (!functionsInstance) {
     functionsInstance = getFunctions(getFirebaseApp());
-    const emulatorHost = process.env.FIREBASE_FUNCTIONS_EMULATOR_HOST;
+    const emulatorHost = readEmulatorSetting('FIREBASE_FUNCTIONS_EMULATOR_HOST', 'functionsEmulatorHost');
     if (emulatorHost && !functionsEmulatorConfigured) {
-      const url = emulatorHost.startsWith('http') ? new URL(emulatorHost) : new URL(`http://${emulatorHost}`);
-      connectFunctionsEmulator(functionsInstance, url.hostname, Number(url.port || 5001));
+      const parsed = parseHostAndPort(emulatorHost, 5001, 'FIREBASE_FUNCTIONS_EMULATOR_HOST');
+      if (parsed) {
+        connectFunctionsEmulator(functionsInstance, parsed.host, parsed.port);
+      }
       functionsEmulatorConfigured = true;
     }
   }
@@ -102,6 +167,8 @@ export const __internal = {
   resetAuthInstance: () => {
     authInstance = null;
     authEmulatorConfigured = false;
+    firestoreInstance = null;
+    firestoreEmulatorConfigured = false;
     functionsInstance = null;
     functionsEmulatorConfigured = false;
   }

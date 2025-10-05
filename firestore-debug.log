@@ -1,4 +1,4 @@
-Oct. 05, 2025 3:17:40 A.M. com.google.cloud.datastore.emulator.firestore.websocket.WebSocketServer start
+Oct. 05, 2025 3:43:58 A.M. com.google.cloud.datastore.emulator.firestore.websocket.WebSocketServer start
 INFO: Started WebSocket server on ws://127.0.0.1:9150
 API endpoint: http://127.0.0.1:8080
 If you are using a library that supports the FIRESTORE_EMULATOR_HOST environment variable, run:
@@ -12,43 +12,43 @@ If you are running a Firestore in Datastore Mode project, run:
 Note: Support for Datastore Mode is in preview. If you encounter any bugs please file at https://github.com/firebase/firebase-tools/issues.
 Dev App Server is now running.
 
-Oct. 05, 2025 3:17:42 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:00 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected non-HTTP/2 connection.
-Oct. 05, 2025 3:17:43 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:01 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected non-HTTP/2 connection.
-Oct. 05, 2025 3:17:43 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:01 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:44 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:02 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:44 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:02 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:44 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:02 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:44 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:02 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:44 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:02 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:44 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:03 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:45 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:04 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:46 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:04 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:46 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:04 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:46 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:04 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:46 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:04 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:46 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:04 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:46 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:04 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:46 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:05 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:46 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:05 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:46 A.M. com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Oct. 05, 2025 3:44:05 A.M. com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L138, evaluation error at L140:24 for 'update' @ L140, false for 'create' @ L138
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -79,31 +79,31 @@ false for 'create' @ L138, evaluation error at L140:24 for 'update' @ L140, fals
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
-Oct. 05, 2025 3:17:46 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:05 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:46 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:05 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:46 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:05 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:47 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:05 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:47 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:05 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:47 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:05 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:47 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:06 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:47 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:06 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:47 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:06 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:47 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:06 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:47 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:06 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:47 A.M. com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
-WARNING: Operation failed: the stored version (1759659467728614) does not match the required base version (1759659467720022)
-com.google.cloud.datastore.core.exception.DatastoreException: the stored version (1759659467728614) does not match the required base version (1759659467720022)
+Oct. 05, 2025 3:44:06 A.M. com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+WARNING: Operation failed: the stored version (1759661046211738) does not match the required base version (1759661046202408)
+com.google.cloud.datastore.core.exception.DatastoreException: the stored version (1759661046211738) does not match the required base version (1759661046202408)
 	at com.google.cloud.datastore.core.exception.DatastoreException.withProblem(DatastoreException.java:207)
 	at com.google.cloud.datastore.core.exception.DatastoreException.withProblemCode(DatastoreException.java:201)
 	at com.google.cloud.datastore.emulator.impl.util.FirestoreEmulatorConverters.checkMutation(FirestoreEmulatorConverters.java:188)
@@ -132,13 +132,13 @@ com.google.cloud.datastore.core.exception.DatastoreException: the stored version
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
-Oct. 05, 2025 3:17:49 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:07 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:49 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:07 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:49 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Oct. 05, 2025 3:44:07 A.M. io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Oct. 05, 2025 3:17:49 A.M. com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Oct. 05, 2025 3:44:07 A.M. com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L202, false for 'update' @ L202
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -169,7 +169,7 @@ false for 'create' @ L202, false for 'update' @ L202
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
-Oct. 05, 2025 3:17:49 A.M. com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Oct. 05, 2025 3:44:07 A.M. com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L138, evaluation error at L140:24 for 'update' @ L140, false for 'create' @ L138
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -200,7 +200,7 @@ false for 'create' @ L138, evaluation error at L140:24 for 'update' @ L140, fals
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
-Oct. 05, 2025 3:17:49 A.M. com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Oct. 05, 2025 3:44:07 A.M. com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L138:24 for 'create' @ L138, evaluation error at L140:24 for 'update' @ L140, Property driverReliability is undefined on object. for 'update' @ L140
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -258,7 +258,7 @@ Caused by: com.google.firebase.rules.runtime.common.EvaluationException: Error: 
 	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:290)
 	... 22 more
 
-Oct. 05, 2025 3:17:49 A.M. com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Oct. 05, 2025 3:44:07 A.M. com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L138:24 for 'create' @ L138, evaluation error at L140:24 for 'update' @ L140, Property driverRating is undefined on object. for 'update' @ L140
 com.google.cloud.datastore.core.exception.DatastoreException: 
