@@ -1,6 +1,6 @@
 import * as admin from 'firebase-admin';
 
-export const PROJECT_ID = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID ?? 'ride-share-dev';
+export const PROJECT_ID = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID ?? 'demo-no-project';
 export const AUTH_EMULATOR_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST ?? '127.0.0.1:9099';
 export const EMULATOR_BASE_URL = AUTH_EMULATOR_HOST.startsWith('http')
   ? AUTH_EMULATOR_HOST

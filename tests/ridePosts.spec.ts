@@ -53,7 +53,7 @@ const loadFile = (path: string) => readFileSync(path, 'utf8');
 
 test.beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
-    projectId: 'ride-share-dev',
+    projectId: 'demo-no-project',
     firestore: {
       host: FIRESTORE_HOST,
       port: FIRESTORE_PORT,

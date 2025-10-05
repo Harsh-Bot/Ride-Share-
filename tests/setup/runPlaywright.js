@@ -1,8 +1,29 @@
 const { spawn } = require('child_process');
 const path = require('path');
 
-const AUTH_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST || '127.0.0.1:9099';
-const FUNCTIONS_HOST = process.env.FIREBASE_FUNCTIONS_EMULATOR_HOST || '127.0.0.1:5001';
+const firebaseConfig = require('../../firebase.json');
+
+const emulatorConfig = firebaseConfig.emulators || {};
+
+const defaultHost = (config = {}, fallbackPort) => {
+  if (!config) {
+    return `127.0.0.1:${fallbackPort}`;
+  }
+
+  const host = config.host || '127.0.0.1';
+  const port = config.port || fallbackPort;
+  return `${host}:${port}`;
+};
+
+const AUTH_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST
+  || defaultHost(emulatorConfig.auth, 9099);
+
+const shouldUseFunctions = Boolean(emulatorConfig.functions)
+  || process.env.FORCE_FIREBASE_FUNCTIONS_EMULATOR === 'true';
+
+const FUNCTIONS_HOST = shouldUseFunctions
+  ? process.env.FIREBASE_FUNCTIONS_EMULATOR_HOST || defaultHost(emulatorConfig.functions, 5001)
+  : null;
 const PLAYWRIGHT_ARGS = ['test', '--reporter=list'];
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -33,14 +54,17 @@ const serverFromHost = host => {
 
 const ensureEmulators = async () => {
   const baseUrl = serverFromHost(AUTH_HOST);
-  const projectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'ride-share-dev';
+  const projectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'demo-no-project';
   const healthUrl = `${baseUrl}/emulator/v1/projects/${projectId}/config`;
-  const functionsBaseUrl = serverFromHost(FUNCTIONS_HOST);
-  const functionsHealthUrl = `${functionsBaseUrl}/emulator/v1/projects/${projectId}/functions`;
+  const functionsHealthUrl = FUNCTIONS_HOST
+    ? `${serverFromHost(FUNCTIONS_HOST)}/emulator/v1/projects/${projectId}/functions`
+    : null;
 
   try {
     await fetchWithRetry(healthUrl, {}, 2);
-    await fetchWithRetry(functionsHealthUrl, {}, 2);
+    if (functionsHealthUrl) {
+      await fetchWithRetry(functionsHealthUrl, {}, 2);
+    }
     return { stop: () => {} };
   } catch (error) {
     // need to start emulator
@@ -50,10 +74,15 @@ const ensureEmulators = async () => {
     ? path.join('node_modules', '.bin', 'firebase.cmd')
     : path.join('node_modules', '.bin', 'firebase');
 
+  const emulatorTargets = ['auth'];
+  if (FUNCTIONS_HOST) {
+    emulatorTargets.push('functions');
+  }
+
   const emulatorArgs = [
     'emulators:start',
     '--only',
-    'auth,functions',
+    emulatorTargets.join(','),
     '--project',
     projectId
   ];
@@ -133,9 +162,11 @@ const runPlaywright = () => {
     stdio: 'inherit',
     env: {
       ...process.env,
-      FIRESTORE_EMULATOR_HOST: process.env.FIRESTORE_EMULATOR_HOST || '127.0.0.1:8080',
+      FIRESTORE_EMULATOR_HOST: process.env.FIRESTORE_EMULATOR_HOST || defaultHost(emulatorConfig.firestore, 8080),
       FIREBASE_AUTH_EMULATOR_HOST: AUTH_HOST,
-      FIREBASE_FUNCTIONS_EMULATOR_HOST: FUNCTIONS_HOST
+      ...(FUNCTIONS_HOST
+        ? { FIREBASE_FUNCTIONS_EMULATOR_HOST: FUNCTIONS_HOST }
+        : {})
     }
   });
 

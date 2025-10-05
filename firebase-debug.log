@@ -1,0 +1,34 @@
+[debug] [2025-10-05T08:54:07.286Z] ----------------------------------------------------------------------
+[debug] [2025-10-05T08:54:07.288Z] Command:       /Users/yohannvinod/.nvm/versions/node/v22.15.0/bin/node /Users/yohannvinod/Github/Ride-Share-/node_modules/.bin/firebase emulators:start --only auth --project demo-no-project
+[debug] [2025-10-05T08:54:07.288Z] CLI Version:   14.18.0
+[debug] [2025-10-05T08:54:07.288Z] Platform:      darwin
+[debug] [2025-10-05T08:54:07.288Z] Node Version:  v22.15.0
+[debug] [2025-10-05T08:54:07.288Z] Time:          Sun Oct 05 2025 01:54:07 GMT-0700 (Pacific Daylight Time)
+[debug] [2025-10-05T08:54:07.288Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-10-05T08:54:07.370Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-10-05T08:54:07.370Z] > authorizing via signed-in user (yohannvinod@gmail.com)
+[info] i  emulators: Starting emulators: auth {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: auth"}}
+[debug] [2025-10-05T08:54:07.538Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-10-05T08:54:07.538Z] assigned listening specs for emulators {"user":{"auth":[{"address":"127.0.0.1","family":"IPv4","port":9099}],"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2025-10-05T08:54:07.540Z] Emulator locator file path: /var/folders/39/nf9g0crj6g99p4qm4ksg2hk40000gn/T/hub-demo-no-project.json
+[debug] [2025-10-05T08:54:07.540Z] [hub] writing locator at /var/folders/39/nf9g0crj6g99p4qm4ksg2hk40000gn/T/hub-demo-no-project.json
+[debug] [2025-10-05T08:54:09.245Z] Could not find VSCode notification endpoint: FetchError: request to http://localhost:40001/vscode/notify failed, reason: . If you are not running the Firebase Data Connect VSCode extension, this is expected and not an issue.
+[info] 
+┌─────────────────────────────────────────────────────────────┐
+│ ✔  All emulators ready! It is now safe to connect your app. │
+│ i  View Emulator UI at http://127.0.0.1:4000/               │
+└─────────────────────────────────────────────────────────────┘
+
+┌────────────────┬────────────────┬────────────────────────────┐
+│ Emulator       │ Host:Port      │ View in Emulator UI        │
+├────────────────┼────────────────┼────────────────────────────┤
+│ Authentication │ 127.0.0.1:9099 │ http://127.0.0.1:4000/auth │
+└────────────────┴────────────────┴────────────────────────────┘
+  Emulator Hub host: 127.0.0.1 port: 4400
+  Other reserved ports: 4500
+
+Issues? Report them at https://github.com/firebase/firebase-tools/issues and attach the *-debug.log files.
+ 
+[warn] ⚠  Multiple projectIds are not recommended in single project mode. Requested project ID demo-no-project, but the emulator is configured for ride-share-dev. To opt-out of single project mode add/set the '"singleProjectMode"' false' property in the firebase.json emulators config. {"metadata":{"emulator":{"name":"auth"},"message":"Multiple projectIds are not recommended in single project mode. Requested project ID demo-no-project, but the emulator is configured for ride-share-dev. To opt-out of single project mode add/set the '\"singleProjectMode\"' false' property in the firebase.json emulators config."}}
+[warn] ⚠  Multiple projectIds are not recommended in single project mode. Requested project ID demo-no-project, but the emulator is configured for ride-share-dev. To opt-out of single project mode add/set the '"singleProjectMode"' false' property in the firebase.json emulators config. {"metadata":{"emulator":{"name":"auth"},"message":"Multiple projectIds are not recommended in single project mode. Requested project ID demo-no-project, but the emulator is configured for ride-share-dev. To opt-out of single project mode add/set the '\"singleProjectMode\"' false' property in the firebase.json emulators config."}}
