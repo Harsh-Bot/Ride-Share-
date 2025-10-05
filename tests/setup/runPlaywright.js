@@ -17,13 +17,10 @@ const defaultHost = (config = {}, fallbackPort) => {
 
 const AUTH_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST
   || defaultHost(emulatorConfig.auth, 9099);
-
-const shouldUseFunctions = Boolean(emulatorConfig.functions)
-  || process.env.FORCE_FIREBASE_FUNCTIONS_EMULATOR === 'true';
-
-const FUNCTIONS_HOST = shouldUseFunctions
-  ? process.env.FIREBASE_FUNCTIONS_EMULATOR_HOST || defaultHost(emulatorConfig.functions, 5001)
-  : null;
+const FIRESTORE_HOST = process.env.FIRESTORE_EMULATOR_HOST
+  || defaultHost(emulatorConfig.firestore, 8080);
+const FUNCTIONS_HOST = process.env.FIREBASE_FUNCTIONS_EMULATOR_HOST
+  || defaultHost(emulatorConfig.functions, 5001);
 const PLAYWRIGHT_ARGS = ['test', '--reporter=list'];
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -56,15 +53,13 @@ const ensureEmulators = async () => {
   const baseUrl = serverFromHost(AUTH_HOST);
   const projectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'demo-no-project';
   const healthUrl = `${baseUrl}/emulator/v1/projects/${projectId}/config`;
-  const functionsHealthUrl = FUNCTIONS_HOST
-    ? `${serverFromHost(FUNCTIONS_HOST)}/emulator/v1/projects/${projectId}/functions`
-    : null;
+  const functionsHealthUrl = `${serverFromHost(FUNCTIONS_HOST)}/emulator/v1/projects/${projectId}/functions`;
+  const firestoreHealthUrl = `${serverFromHost(FIRESTORE_HOST)}/`;
 
   try {
     await fetchWithRetry(healthUrl, {}, 2);
-    if (functionsHealthUrl) {
-      await fetchWithRetry(functionsHealthUrl, {}, 2);
-    }
+    await fetchWithRetry(firestoreHealthUrl, {}, 2);
+    await fetchWithRetry(functionsHealthUrl, {}, 2);
     return { stop: () => {} };
   } catch (error) {
     // need to start emulator
@@ -74,10 +69,7 @@ const ensureEmulators = async () => {
     ? path.join('node_modules', '.bin', 'firebase.cmd')
     : path.join('node_modules', '.bin', 'firebase');
 
-  const emulatorTargets = ['auth'];
-  if (FUNCTIONS_HOST) {
-    emulatorTargets.push('functions');
-  }
+  const emulatorTargets = ['auth', 'firestore', 'functions'];
 
   const emulatorArgs = [
     'emulators:start',
@@ -141,6 +133,7 @@ const ensureEmulators = async () => {
 
   await readyPromise;
   await fetchWithRetry(healthUrl, {}, 10);
+  await fetchWithRetry(firestoreHealthUrl, {}, 10);
   await fetchWithRetry(functionsHealthUrl, {}, 10);
 
   return {
@@ -162,11 +155,9 @@ const runPlaywright = () => {
     stdio: 'inherit',
     env: {
       ...process.env,
-      FIRESTORE_EMULATOR_HOST: process.env.FIRESTORE_EMULATOR_HOST || defaultHost(emulatorConfig.firestore, 8080),
+      FIRESTORE_EMULATOR_HOST: FIRESTORE_HOST,
       FIREBASE_AUTH_EMULATOR_HOST: AUTH_HOST,
-      ...(FUNCTIONS_HOST
-        ? { FIREBASE_FUNCTIONS_EMULATOR_HOST: FUNCTIONS_HOST }
-        : {})
+      FIREBASE_FUNCTIONS_EMULATOR_HOST: FUNCTIONS_HOST
     }
   });
 

@@ -1,6 +1,9 @@
+/* @jsxRuntime automatic */
+/* @jsxImportSource react */
 import '../../setup/playwrightRegister.js';
 import { test, expect } from '@playwright/test';
 import TestRenderer, { act } from 'react-test-renderer';
+import React from 'react';
 
 import { AuthProvider } from '../../../src/contexts/AuthContext';
 import { useAuth } from '../../../src/hooks/useAuth';
@@ -25,11 +28,10 @@ const createAuthHarness = async () => {
 
   await act(async () => {
     renderer = TestRenderer.create(
-      <AuthProvider>
-        <Capture />
-      </AuthProvider>
+      React.createElement(AuthProvider, null, React.createElement(Capture))
     );
   });
+
 
   await act(async () => {
     await Promise.resolve();

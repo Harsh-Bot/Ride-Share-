@@ -1,4 +1,6 @@
-const functions = require('firebase-functions');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { beforeUserCreated, beforeUserSignedIn } = require('firebase-functions/v2/identity');
+const logger = require('firebase-functions/logger');
 const admin = require('firebase-admin');
 const crypto = require('crypto');
 
@@ -8,17 +10,18 @@ const {
   createMagicLinkRecord,
   consumeMagicLinkRecord,
   MagicLinkError,
-  getMagicLinkTtlSeconds
+  getMagicLinkTtlSeconds,
+  findLatestPendingMagicLink
 } = require('./src/auth/magicLinkStore');
 
 admin.initializeApp();
 
-exports.enforceEmailAllowlist = functions.auth.user().beforeCreate(user => {
+exports.enforceEmailAllowlist = beforeUserCreated(event => {
   const allowedDomains = getAllowedEmailDomains();
-  const validation = validateEmailDomain(user.email || '', allowedDomains);
+  const validation = validateEmailDomain(event.data.email || '', allowedDomains);
 
   if (!validation.ok) {
-    throw new functions.auth.HttpsError('permission-denied', validation.message);
+    throw new HttpsError('permission-denied', validation.message);
   }
 
   return {
@@ -26,13 +29,13 @@ exports.enforceEmailAllowlist = functions.auth.user().beforeCreate(user => {
   };
 });
 
-exports.prepareMagicLink = functions.https.onCall(async (data, context) => {
-  const email = typeof data?.email === 'string' ? data.email : '';
+exports.prepareMagicLink = onCall(async request => {
+  const email = typeof request.data?.email === 'string' ? request.data.email : '';
   const allowedDomains = getAllowedEmailDomains();
   const validation = validateEmailDomain(email, allowedDomains);
 
   if (!validation.ok) {
-    throw new functions.https.HttpsError('failed-precondition', validation.message);
+    throw new HttpsError('failed-precondition', validation.message);
   }
 
   const nonce = crypto.randomUUID();
@@ -44,33 +47,59 @@ exports.prepareMagicLink = functions.https.onCall(async (data, context) => {
   };
 });
 
-exports.verifyMagicLink = functions.auth.user().beforeSignIn(async event => {
+exports.verifyMagicLink = beforeUserSignedIn(async event => {
   const credential = event.credential?.emailLinkSignin;
-  if (!credential) {
-    return;
+  logger.debug('verifyMagicLink event payload', {
+    hasCredential: Boolean(credential),
+    credentialKeys: credential ? Object.keys(credential) : null,
+    email: event.data?.email,
+    uid: event.uid
+  });
+
+  const normalizedEmail = (event.data?.email || '').toLowerCase();
+  if (!normalizedEmail) {
+    throw new HttpsError('permission-denied', 'Magic link is invalid.');
+  }
+  let resolvedNonce = null;
+
+  if (credential) {
+    const link = credential.emailLink || credential.link || credential.signInLink;
+    if (!link) {
+      throw new HttpsError('permission-denied', 'Magic link is invalid.');
+    }
+
+    const parsedLink = new URL(link);
+    const continueUrlParam = parsedLink.searchParams.get('continueUrl');
+    if (!continueUrlParam) {
+      throw new HttpsError('permission-denied', 'Magic link is invalid.');
+    }
+
+    const continueUrl = new URL(continueUrlParam);
+    const nonce = continueUrl.searchParams.get('nonce');
+    if (!nonce) {
+      throw new HttpsError('permission-denied', 'Magic link is invalid.');
+    }
+    resolvedNonce = nonce;
   }
 
-  const link = credential.emailLink || credential.link || credential.signInLink;
-  if (!link) {
-    throw new functions.auth.HttpsError('permission-denied', 'Magic link is invalid.');
+  if (!resolvedNonce) {
+    const pending = await findLatestPendingMagicLink(normalizedEmail);
+    if (!pending) {
+      throw new HttpsError('permission-denied', 'Magic link is invalid or already used.');
+    }
+    resolvedNonce = pending.id;
   }
 
-  const parsedLink = new URL(link);
-  const continueUrlParam = parsedLink.searchParams.get('continueUrl');
-  if (!continueUrlParam) {
-    throw new functions.auth.HttpsError('permission-denied', 'Magic link is invalid.');
-  }
-
-  const continueUrl = new URL(continueUrlParam);
-  const nonce = continueUrl.searchParams.get('nonce');
-  if (!nonce) {
-    throw new functions.auth.HttpsError('permission-denied', 'Magic link is invalid.');
-  }
+  logger.debug('verifyMagicLink checking record', {
+    nonce: resolvedNonce,
+    email: normalizedEmail,
+    uid: event.uid
+  });
 
   try {
     await consumeMagicLinkRecord({
-      nonce,
-      email: (event.data.email || '').toLowerCase(),
+      nonce: resolvedNonce,
+      email: normalizedEmail,
       metadata: {
         uid: event.uid
       }
@@ -83,7 +112,7 @@ exports.verifyMagicLink = functions.auth.user().beforeSignIn(async event => {
           : error.code === 'consumed'
           ? 'Magic link has already been used or expired. Request a new one.'
           : 'Magic link is invalid.';
-      throw new functions.auth.HttpsError('permission-denied', message);
+      throw new HttpsError('permission-denied', message);
     }
     throw error;
   }

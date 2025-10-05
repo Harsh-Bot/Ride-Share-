@@ -2,7 +2,9 @@ const Module = require('module');
 const path = require('path');
 
 require('esbuild-register/dist/node').register({
-  extensions: ['.ts', '.tsx']
+  extensions: ['.ts', '.tsx'],
+  jsx: 'automatic',
+  jsxImportSource: 'react'
 });
 
 const ensureEnv = (key, fallback) => {
@@ -22,9 +24,11 @@ ensureEnv('EXPO_PUBLIC_FIREBASE_DYNAMIC_LINK_DOMAIN', 'sfurideshare.page.link');
 ensureEnv('EXPO_PUBLIC_FIREBASE_MAGIC_LINK_PATH', 'auth/verify');
 ensureEnv('EXPO_PUBLIC_IOS_BUNDLE_ID', 'ca.sfu.rideshare');
 ensureEnv('EXPO_PUBLIC_ANDROID_PACKAGE_NAME', 'ca.sfu.rideshare');
-ensureEnv('FIREBASE_AUTH_EMULATOR_HOST', '127.0.0.1:8080');
+ensureEnv('FIREBASE_AUTH_EMULATOR_HOST', '127.0.0.1:9099');
 ensureEnv('ALLOWED_EMAIL_DOMAINS', 'sfu.ca,cs.sfu.ca');
-ensureEnv('FIREBASE_FUNCTIONS_EMULATOR_HOST', '127.0.0.1:8080');
+ensureEnv('FIREBASE_FUNCTIONS_EMULATOR_HOST', '127.0.0.1:5001');
+ensureEnv('FIRESTORE_EMULATOR_HOST', '127.0.0.1:8080');
+ensureEnv('FIREBASE_EMULATOR_LOG_PATH', path.resolve(__dirname, '..', '..', 'logs', 'firebase-debug.log'));
 
 const memoryStore = new Map();
 
@@ -105,6 +109,27 @@ Module.prototype.require = function patchedRequire(request) {
   }
   return originalRequire.apply(this, arguments);
 };
+
+try {
+  const reactJsxRuntime = require('react/jsx-runtime');
+  const reactJsxDevRuntime = require('react/jsx-dev-runtime');
+  const playwrightJsxRuntimePath = require.resolve('playwright/jsx-runtime');
+  const playwrightJsxDevRuntimePath = require.resolve('playwright/jsx-dev-runtime');
+  require.cache[playwrightJsxRuntimePath] = {
+    id: playwrightJsxRuntimePath,
+    filename: playwrightJsxRuntimePath,
+    loaded: true,
+    exports: reactJsxRuntime
+  };
+  require.cache[playwrightJsxDevRuntimePath] = {
+    id: playwrightJsxDevRuntimePath,
+    filename: playwrightJsxDevRuntimePath,
+    loaded: true,
+    exports: reactJsxDevRuntime
+  };
+} catch (error) {
+  // ignore if playwright jsx runtime resolution fails
+}
 
 process.env.PLAYWRIGHT_REGISTER_LOADED = 'true';
 

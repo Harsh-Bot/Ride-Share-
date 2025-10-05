@@ -1,4 +1,5 @@
 const admin = require('firebase-admin');
+const logger = require('firebase-functions/logger');
 
 const COLLECTION_NAME = 'magicLinkRequests';
 const MAX_TTL_SECONDS = 15 * 60;
@@ -26,6 +27,27 @@ class MagicLinkError extends Error {
 
 const collection = () => firestoreAccessor().collection(COLLECTION_NAME);
 
+const findLatestPendingMagicLink = async email => {
+  const normalizedEmail = email.toLowerCase();
+  const snapshot = await collection().where('email', '==', normalizedEmail).get();
+
+  let latest = null;
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    if (data.consumed) {
+      return;
+    }
+    if (!latest || (typeof data.issuedAt === 'number' && data.issuedAt > latest.data.issuedAt)) {
+      latest = {
+        id: doc.id,
+        data
+      };
+    }
+  });
+
+  return latest;
+};
+
 const createMagicLinkRecord = async ({ email, nonce }) => {
   const issuedAt = nowAccessor();
   const docRef = collection().doc(nonce);
@@ -52,6 +74,7 @@ const consumeMagicLinkRecord = async ({ email, nonce, metadata = {} }) => {
     }
 
     const data = snapshot.data();
+    logger.debug('magicLinkRecord', { nonce, data });
     const storedEmail = (data.email || '').toLowerCase();
     if (storedEmail !== email.toLowerCase()) {
       throw new MagicLinkError('email_mismatch', 'Magic link email mismatch.');
@@ -91,6 +114,7 @@ exports.createMagicLinkRecord = createMagicLinkRecord;
 exports.consumeMagicLinkRecord = consumeMagicLinkRecord;
 exports.getMagicLinkStatus = getMagicLinkStatus;
 exports.getMagicLinkTtlSeconds = getTtlSeconds;
+exports.findLatestPendingMagicLink = findLatestPendingMagicLink;
 
 exports.__internal = {
   setFirestoreAccessor: fn => {

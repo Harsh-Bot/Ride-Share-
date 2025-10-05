@@ -98,8 +98,17 @@ export const verifyLink = async (link: string, email?: string) => {
     throw new Error('Email address required to complete sign-in');
   }
 
-  const credential = await signInWithEmailLink(auth, signInEmail, trimmedLink);
-  return credential.user;
+  try {
+    const credential = await signInWithEmailLink(auth, signInEmail, trimmedLink);
+    return credential.user;
+  } catch (error) {
+    const code = (error as { code?: string })?.code;
+    const message = (error as { message?: string })?.message ?? '';
+    if (code === 'auth/invalid-action-code' || /already used/i.test(message)) {
+      throw new Error('Magic link has already been used or expired. Request a new one.');
+    }
+    throw error;
+  }
 };
 
 export const getMagicLinkMetadata = (link: string) => parseMagicLinkMetadata(link);
