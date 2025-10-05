@@ -155,7 +155,7 @@ export const buildRidePostCreateData = ({
   const driverReliability = typeof inputDriverReliability === 'number' ? Math.max(0, Math.min(1, inputDriverReliability)) : undefined;
   const driverRating = typeof inputDriverRating === 'number' ? Math.max(0, Math.min(5, inputDriverRating)) : undefined;
 
-  const base: any = {
+  const base: RidePostWriteData = {
     driverId,
     origin: {
       lat: origin.lat,
