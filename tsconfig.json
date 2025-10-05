@@ -7,7 +7,6 @@
     "types": [
       "react",
       "react-native",
-      "node",
       "jest"
     ]
   },

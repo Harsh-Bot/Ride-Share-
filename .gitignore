@@ -4,4 +4,3 @@
 .expo
 test-results/
 playwright-report/
-.env*

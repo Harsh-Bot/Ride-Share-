@@ -64,21 +64,6 @@ npm run test:ci    # Jest in CI mode
 npm run test:e2e   # Playwright (requires running Expo web; reporter=list)
 ```
 
-## Firebase Emulator Setup
-1. Copy `.env.example` to `.env.local` (or `.env`) and adjust values as needed.
-   - Replace `127.0.0.1` in the emulator host entries with your computer's LAN IP when testing on a physical device so Expo Go can reach the emulators.
-2. Start the Firebase emulators locally:
-   ```bash
-   npx firebase emulators:start --only auth,firestore,functions
-   ```
-   (The Playwright test harness auto-starts emulators when missing.)
-3. Launch Expo with a clean cache so the environment changes take effect:
-   ```bash
-   npx expo start -c
-   ```
-
-The app now reads emulator host config from `EXPO_PUBLIC_*` environment variables or `expo.extra.firebase` values produced by `app.config.js`. Firestore, Auth, and Functions automatically connect to emulators whenever those values are present.
-
 ## Assets
 - `assets/images/homepage.png` – Home tab header illustration
 - `assets/images/logo.png` – App icon/splash
