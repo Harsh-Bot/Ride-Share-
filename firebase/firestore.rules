@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isBackend() {
+      return isAuthenticated() && request.auth.token.backend == true;
+    }
+
+    function isDriverCreatingOwnRide(data) {
+      return isAuthenticated() && data.driverId is string && request.auth.uid == data.driverId;
+    }
+
+    function listContains(list, value) {
+      return list.hasAny([value]);
+    }
+
+    function isValidOrigin(origin) {
+      return origin is map &&
+        origin.keys().hasOnly(['lat', 'lng', 'label', 'geohash']) &&
+        origin.lat is number && origin.lat >= -90 && origin.lat <= 90 &&
+        origin.lng is number && origin.lng >= -180 && origin.lng <= 180 &&
+        origin.label is string && origin.label.size() > 0 && origin.label.size() <= 120 &&
+        origin.geohash is string && origin.geohash.size() >= 3 && origin.geohash.size() <= 12;
+    }
+
+    function hasValidCoreFields(data) {
+      return data.keys().hasOnly([
+          'driverId',
+          'origin',
+          'destinationCampus',
+          'seatsTotal',
+          'seatsAvailable',
+          'windowStart',
+          'windowEnd',
+          'status',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.driverId is string && data.driverId.size() > 0 &&
+        data.destinationCampus is string && data.destinationCampus.size() > 0 &&
+        isValidOrigin(data.origin) &&
+        data.seatsTotal is int && data.seatsTotal > 0 &&
+        data.seatsAvailable is int && data.seatsAvailable >= 0 && data.seatsAvailable <= data.seatsTotal &&
+        data.windowStart is timestamp &&
+        data.windowEnd is timestamp && data.windowEnd > data.windowStart &&
+        data.status is string && listContains(['open', 'expired', 'canceled', 'inTrip'], data.status);
+    }
+
+    function isValidRidePostCreate(data) {
+      return hasValidCoreFields(data) &&
+        data.status == 'open' &&
+        data.createdAt == request.time &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidRidePostUpdate(data) {
+      return hasValidCoreFields(data) &&
+        data.driverId == resource.data.driverId &&
+        data.createdAt == resource.data.createdAt &&
+        data.updatedAt == request.time &&
+        isValidStatusTransition(resource.data.status, data.status);
+    }
+
+    function isValidStatusTransition(current, next) {
+      return current == next ||
+        (current == 'open' && listContains(['expired', 'canceled', 'inTrip'], next));
+    }
+
+    match /ridePosts/{postId} {
+      allow create: if isDriverCreatingOwnRide(request.resource.data) && isValidRidePostCreate(request.resource.data);
+      allow read: if isAuthenticated();
+      allow update: if isBackend() && isValidRidePostUpdate(request.resource.data);
+      allow delete: if isBackend();
+    }
+  }
+}

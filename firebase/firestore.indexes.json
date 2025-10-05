@@ -1,0 +1,24 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "ridePosts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "destinationCampus", "order": "ASCENDING" },
+        { "fieldPath": "windowStart", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "ridePosts",
+      "fieldPath": "origin.geohash",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        }
+      ]
+    }
+  ]
+}
