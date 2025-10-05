@@ -1,14 +1,15 @@
 const admin = require('firebase-admin');
 
 const COLLECTION_NAME = 'magicLinkRequests';
-const DEFAULT_TTL_SECONDS = 15 * 60;
+const MAX_TTL_SECONDS = 15 * 60;
+const DEFAULT_TTL_SECONDS = MAX_TTL_SECONDS;
 
 const parseTtl = raw => {
   const parsed = Number.parseInt(raw, 10);
   if (!Number.isFinite(parsed) || parsed <= 0) {
     return DEFAULT_TTL_SECONDS;
   }
-  return Math.min(parsed, DEFAULT_TTL_SECONDS);
+  return Math.min(parsed, MAX_TTL_SECONDS);
 };
 
 let firestoreAccessor = () => admin.firestore();
@@ -37,7 +38,7 @@ const createMagicLinkRecord = async ({ email, nonce }) => {
   return { nonce, issuedAt };
 };
 
-const consumeMagicLinkRecord = async ({ email, nonce }) => {
+const consumeMagicLinkRecord = async ({ email, nonce, metadata = {} }) => {
   const ttlMs = getTtlSeconds() * 1000;
   const now = nowAccessor();
 
@@ -64,10 +65,16 @@ const consumeMagicLinkRecord = async ({ email, nonce }) => {
       throw new MagicLinkError('expired', 'Magic link has expired.');
     }
 
-    tx.update(docRef, {
+    const updatePayload = {
       consumed: true,
       consumedAt: now
-    });
+    };
+
+    if (metadata.uid) {
+      updatePayload.consumedByUid = metadata.uid;
+    }
+
+    tx.update(docRef, updatePayload);
   });
 };
 

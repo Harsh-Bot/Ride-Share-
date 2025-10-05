@@ -42,7 +42,7 @@ const VerifyEmailScreen = ({ route }: Props) => {
         <Text style={styles.title}>Check your inbox</Text>
         <Text style={styles.body}>
           We sent a magic link to {email ? <Text style={styles.emailText}>{email}</Text> : 'your email'}.
-          {' '}Open it on this device to finish signing in. The link expires quickly for security.
+          {' '}Open it on this device to finish signing in. The link expires within 15 minutes for security.
         </Text>
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
         <TouchableOpacity

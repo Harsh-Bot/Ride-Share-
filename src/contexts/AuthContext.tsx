@@ -12,7 +12,7 @@ import * as Linking from 'expo-linking';
 import { onAuthStateChanged, signOut as firebaseSignOut, User } from 'firebase/auth';
 
 import { getFirebaseAuth } from '../services/firebase';
-import { sendMagicLink, verifyLink } from '../services/firebase/auth';
+import { getMagicLinkMetadata, sendMagicLink, verifyLink } from '../services/firebase/auth';
 import { clearPendingEmail, getPendingEmail, savePendingEmail } from '../features/auth/storage';
 import { showToast } from '../utils/toast';
 import { validateEmailAgainstAllowlist } from '../config/emailAllowlist';
@@ -174,12 +174,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     dispatch({ type: 'COMPLETE_START' });
 
     try {
-      const storedEmail = (await getPendingEmail()) ?? stateRef.current.pendingEmail;
-      if (!storedEmail) {
-        throw new Error('We could not find the email used for this sign-in. Please request a new link.');
-      }
+      const cachedEmail = (await getPendingEmail()) ?? stateRef.current.pendingEmail;
+      const metadata = getMagicLinkMetadata(trimmedLink);
+      const candidateEmail = cachedEmail ?? metadata.email;
+      const effectiveEmail =
+        typeof candidateEmail === 'string' && candidateEmail.trim().length > 0
+          ? candidateEmail
+          : undefined;
 
-      await verifyLink(trimmedLink, storedEmail);
+      await verifyLink(trimmedLink, effectiveEmail);
       await clearPendingEmail();
       dispatch({ type: 'COMPLETE_SUCCESS' });
       showToast('Signed in successfully');

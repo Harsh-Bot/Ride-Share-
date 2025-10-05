@@ -70,7 +70,10 @@ exports.verifyMagicLink = functions.auth.user().beforeSignIn(async event => {
   try {
     await consumeMagicLinkRecord({
       nonce,
-      email: (event.data.email || '').toLowerCase()
+      email: (event.data.email || '').toLowerCase(),
+      metadata: {
+        uid: event.uid
+      }
     });
   } catch (error) {
     if (error instanceof MagicLinkError) {
@@ -78,7 +81,7 @@ exports.verifyMagicLink = functions.auth.user().beforeSignIn(async event => {
         error.code === 'expired'
           ? 'Magic link has expired. Request a new one.'
           : error.code === 'consumed'
-          ? 'Magic link has already been used. Request a new one.'
+          ? 'Magic link has already been used or expired. Request a new one.'
           : 'Magic link is invalid.';
       throw new functions.auth.HttpsError('permission-denied', message);
     }

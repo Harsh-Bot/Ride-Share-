@@ -3,6 +3,7 @@ const {
   consumeMagicLinkRecord,
   MagicLinkError,
   getMagicLinkStatus,
+  getMagicLinkTtlSeconds,
   __internal
 } = require('../src/auth/magicLinkStore');
 
@@ -47,11 +48,22 @@ const createMemoryDb = () => {
 describe('magicLinkStore', () => {
   const memoryDb = createMemoryDb();
   const fixedNow = 1_000_000;
+  let originalTtl;
 
   beforeEach(() => {
+    originalTtl = process.env.MAGIC_LINK_TTL_SECONDS;
+    delete process.env.MAGIC_LINK_TTL_SECONDS;
     memoryDb.__store.clear();
     __internal.setFirestoreAccessor(() => memoryDb);
     __internal.setNowAccessor(() => fixedNow);
+  });
+
+  afterEach(() => {
+    if (originalTtl === undefined) {
+      delete process.env.MAGIC_LINK_TTL_SECONDS;
+    } else {
+      process.env.MAGIC_LINK_TTL_SECONDS = originalTtl;
+    }
   });
 
   afterAll(() => {
@@ -87,6 +99,18 @@ describe('magicLinkStore', () => {
     );
   });
 
+  it('captures consuming uid when provided', async () => {
+    await createMagicLinkRecord({ email: 'student@sfu.ca', nonce: 'nonce-uid' });
+    await consumeMagicLinkRecord({
+      email: 'student@sfu.ca',
+      nonce: 'nonce-uid',
+      metadata: { uid: 'user-123' }
+    });
+
+    const status = await getMagicLinkStatus('nonce-uid');
+    expect(status.consumedByUid).toBe('user-123');
+  });
+
   it('rejects expired magic links', async () => {
     __internal.setNowAccessor(() => 0);
     await createMagicLinkRecord({ email: 'student@sfu.ca', nonce: 'nonce-3' });
@@ -97,5 +121,10 @@ describe('magicLinkStore', () => {
     await expect(consumeMagicLinkRecord({ email: 'student@sfu.ca', nonce: 'nonce-3' })).rejects.toThrow(
       MagicLinkError
     );
+  });
+
+  it('caps ttl to fifteen minutes even when configured higher', () => {
+    process.env.MAGIC_LINK_TTL_SECONDS = '1800';
+    expect(getMagicLinkTtlSeconds()).toBe(15 * 60);
   });
 });
