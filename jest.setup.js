@@ -3,6 +3,40 @@ import mockSafeAreaContext from 'react-native-safe-area-context/jest/mock';
 
 jest.mock('react-native-safe-area-context', () => mockSafeAreaContext);
 
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: {
+    expoConfig: { extra: {} },
+    manifest: { extra: {} }
+  }
+}));
+
+jest.mock('expo-location', () => ({
+  __esModule: true,
+  PermissionStatus: {
+    GRANTED: 'granted',
+    DENIED: 'denied'
+  },
+  Accuracy: {
+    Balanced: 3
+  },
+  getForegroundPermissionsAsync: jest.fn(async () => ({ status: 'granted' })),
+  requestForegroundPermissionsAsync: jest.fn(async () => ({ status: 'granted' })),
+  getCurrentPositionAsync: jest.fn(async () => ({
+    coords: {
+      latitude: 49.2827,
+      longitude: -123.1207,
+      accuracy: 5
+    },
+    timestamp: Date.now()
+  }))
+}));
+
+jest.mock('firebase/functions', () => ({
+  __esModule: true,
+  getFunctions: jest.fn(() => ({}))
+}));
+
 jest.mock('zustand', () => {
   const actual = jest.requireActual('zustand');
   const { act } = jest.requireActual('@testing-library/react-native');

@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { collection, onSnapshot as fsOnSnapshot, query, getDocs } from 'firebase/firestore';
+import {
+  collection,
+  onSnapshot as fsOnSnapshot,
+  query,
+  getDocs,
+  where,
+  orderBy,
+  startAt,
+  endAt
+} from 'firebase/firestore';
 import { getFirestoreDb } from '../../../services/firebase';
 
 export type RideFeedItem = {
@@ -107,14 +116,20 @@ export class RideFeedController {
 // Default Firestore-powered subscribe/refresh
 const defaultSubscribe: SubscribeToRideFeedFn = ({ onSnapshot: push, onError, geohashPrefixes }) => {
   const db = getFirestoreDb();
-  let qRef: any;
+  let qRef;
   if (geohashPrefixes && geohashPrefixes.length === 1) {
     const prefix = geohashPrefixes[0];
     const start = prefix;
     const end = prefix + '\uf8ff';
-    qRef = query(collection(db, 'ridePosts'), (global as any).where('status', '==', 'open'), (global as any).orderBy('geohash'), (global as any).startAt(start), (global as any).endAt(end));
+    qRef = query(
+      collection(db, 'ridePosts'),
+      where('status', '==', 'open'),
+      orderBy('geohash'),
+      startAt(start),
+      endAt(end)
+    );
   } else {
-    qRef = query(collection(db, 'ridePosts'), (global as any).where('status', '==', 'open'));
+    qRef = query(collection(db, 'ridePosts'), where('status', '==', 'open'));
   }
   const unsub = fsOnSnapshot(
     qRef,

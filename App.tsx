@@ -10,6 +10,7 @@ import { NotificationsProvider } from './src/contexts/NotificationsContext';
 import { AppThemeProvider } from './src/theme/AppThemeProvider';
 import { navigationTheme } from './src/theme/navigationTheme';
 import { linkingConfig } from './src/navigation/linking';
+import { MagicLinkListener } from './src/features/auth/components/MagicLinkListener';
 
 const App = () => {
   const queryClient = useMemo(() => new QueryClient(), []);
@@ -22,6 +23,7 @@ const App = () => {
             <AppThemeProvider>
               <NavigationContainer theme={navigationTheme} linking={linkingConfig}>
                 <StatusBar style="auto" />
+                <MagicLinkListener />
                 <AppNavigator />
               </NavigationContainer>
             </AppThemeProvider>

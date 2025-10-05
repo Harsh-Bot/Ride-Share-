@@ -1,8 +1,11 @@
-// TODO: Populate with project-specific Firebase web configuration
+import { getFirebaseRuntimeConfig } from '../../config/environment';
+
+const runtimeConfig = getFirebaseRuntimeConfig();
+
 export const firebaseConfig = {
-  apiKey: 'TODO',
-  authDomain: 'TODO',
-  projectId: 'TODO',
+  apiKey: runtimeConfig.apiKey ?? 'TODO',
+  authDomain: runtimeConfig.authDomain ?? 'TODO',
+  projectId: runtimeConfig.projectId ?? 'TODO',
   storageBucket: 'TODO',
   messagingSenderId: 'TODO',
   appId: 'TODO',

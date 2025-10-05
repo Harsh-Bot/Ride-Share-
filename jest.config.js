@@ -2,7 +2,7 @@ module.exports = {
   preset: 'react-native',
   setupFiles: ['<rootDir>/jest.setup.pre.js'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  testPathIgnorePatterns: ['/node_modules/', '/android/', '/ios/', '/.expo/', '/playwright/'],
+  testPathIgnorePatterns: ['/node_modules/', '/android/', '/ios/', '/.expo/', '/playwright/', '/tests/'],
   transformIgnorePatterns: [
     'node_modules/(?!(jest-)?react-native|@react-native|@react-navigation|expo(|-.*)|@expo(|-.*)|@unimodules|@react-native-community|@react-native-picker|@sentry|@tanstack|firebase(|-.*)|@firebase(|-.*))'
   ],

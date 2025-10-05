@@ -1,5 +1,11 @@
 import { createContext, ReactNode, useCallback, useContext, useMemo, useState } from 'react';
-import { isSfuEmail } from '../utils/validation';
+
+import {
+  sendSignInLink,
+  completeSignIn as completeEmailLinkSignIn,
+  InvalidCampusEmailError
+} from '../services/firebase/auth';
+import { ConfigurationError } from '../config/environment';
 
 type AuthUser = {
   email: string;
@@ -8,6 +14,7 @@ type AuthUser = {
 type AuthContextValue = {
   isAuthenticated: boolean;
   isLoading: boolean;
+  isSendingLink: boolean;
   user: AuthUser | null;
   pendingEmail: string | null;
   authError: string | null;
@@ -24,17 +31,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isSendingLink, setIsSendingLink] = useState(false);
 
   const initiateSignIn = useCallback<AuthContextValue['initiateSignIn']>(async (email) => {
     const normalizedEmail = email.trim().toLowerCase();
 
-    if (!isSfuEmail(normalizedEmail)) {
-      setAuthError('Please use a valid @sfu.ca email address.');
-      throw new Error('Invalid SFU email domain');
-    }
-
     setAuthError(null);
-    setPendingEmail(normalizedEmail);
+    setIsSendingLink(true);
+    try {
+      await sendSignInLink(normalizedEmail);
+      setPendingEmail(normalizedEmail);
+    } catch (error) {
+      if (error instanceof InvalidCampusEmailError || error instanceof ConfigurationError) {
+        setAuthError(error.message);
+        throw error;
+      }
+
+      const message = error instanceof Error ? error.message : 'Unable to send verification link.';
+      setAuthError(message);
+      throw new Error(message);
+    } finally {
+      setIsSendingLink(false);
+    }
   }, []);
 
   const completeSignIn = useCallback<AuthContextValue['completeSignIn']>(async (code) => {
@@ -44,20 +62,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw new Error(errorMessage);
     }
 
-    const sanitizedCode = code.trim();
-    if (sanitizedCode.length !== 6 || !/^[0-9]{6}$/.test(sanitizedCode)) {
-      const errorMessage = 'Enter the 6-digit code sent to your SFU email.';
-      setAuthError(errorMessage);
-      throw new Error(errorMessage);
-    }
-
     setIsLoading(true);
     try {
-      const authenticatedUser: AuthUser = { email: pendingEmail };
+      const credential = await completeEmailLinkSignIn(pendingEmail, code);
+      const authenticatedUser: AuthUser = {
+        email: credential.user?.email ?? pendingEmail
+      };
       setUser(authenticatedUser);
       setIsAuthenticated(true);
       setPendingEmail(null);
       setAuthError(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Verification failed.';
+      setAuthError(message);
+      throw new Error(message);
     } finally {
       setIsLoading(false);
     }
@@ -73,6 +91,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     () => ({
       isAuthenticated,
       isLoading,
+      isSendingLink,
       user,
       pendingEmail,
       authError,
@@ -80,7 +99,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       completeSignIn,
       signOut
     }),
-    [authError, completeSignIn, initiateSignIn, isAuthenticated, isLoading, pendingEmail, signOut, user]
+    [
+      authError,
+      completeSignIn,
+      initiateSignIn,
+      isAuthenticated,
+      isLoading,
+      isSendingLink,
+      pendingEmail,
+      signOut,
+      user
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import KeyboardSafe from '../../../components/layout/KeyboardSafe';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -9,7 +9,7 @@ import { useProfileStore, GenderOption } from '../../../store/useProfileStore';
 type Props = NativeStackScreenProps<AuthStackParamList, 'SignIn'>;
 
 const SignInScreen = ({ navigation }: Props) => {
-  const { initiateSignIn, authError, pendingEmail } = useAuth();
+  const { initiateSignIn, authError, pendingEmail, isSendingLink } = useAuth();
   const { setNickname, setGender } = useProfileStore((state) => ({
     setNickname: state.setNickname,
     setGender: state.setGender
@@ -18,6 +18,8 @@ const SignInScreen = ({ navigation }: Props) => {
   const [nickname, setNicknameLocal] = useState('');
   const [gender, setGenderLocal] = useState<GenderOption | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const [nicknameError, setNicknameError] = useState<string | null>(null);
   const [genderError, setGenderError] = useState<string | null>(null);
 
@@ -38,14 +40,35 @@ const SignInScreen = ({ navigation }: Props) => {
       setGenderError(null);
       setNickname(trimmedNickname);
       setGender(gender);
+      setError(null);
+      setSuccessMessage(null);
       await initiateSignIn(email);
+      setSuccessMessage(`Verification link sent to ${email}.`);
+      setCooldownRemaining(30);
       navigation.navigate('VerifyEmail', { email });
     } catch (err) {
       setError((err as Error).message);
     }
   };
 
+  useEffect(() => {
+    if (cooldownRemaining <= 0) {
+      return;
+    }
+    const intervalId = setInterval(() => {
+      setCooldownRemaining((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [cooldownRemaining]);
+
   const message = error ?? authError;
+  const linkLabel = isSendingLink
+    ? 'Sending…'
+    : cooldownRemaining > 0
+        ? `Resend in ${cooldownRemaining}s`
+        : 'Send verification link';
+  const isSubmitDisabled = isSendingLink || cooldownRemaining > 0;
 
   return (
     <KeyboardSafe scroll contentContainerStyle={styles.container} testID="KeyboardSafe.SignIn">
@@ -112,19 +135,29 @@ const SignInScreen = ({ navigation }: Props) => {
           if (error) {
             setError(null);
           }
+          if (successMessage) {
+            setSuccessMessage(null);
+          }
         }}
         autoCapitalize="none"
         keyboardType="email-address"
         accessibilityLabel="Enter your SFU email"
       />
       {message ? <Text style={styles.error}>{message}</Text> : null}
+      {successMessage ? <Text style={styles.success}>{successMessage}</Text> : null}
+      {cooldownRemaining > 0 ? (
+        <Text style={styles.cooldownMessage}>
+          You can request another link in {cooldownRemaining}s.
+        </Text>
+      ) : null}
       <TouchableOpacity
         style={styles.cta}
         onPress={handleContinue}
         accessibilityRole="button"
         accessibilityLabel="Send sign-in code"
+        disabled={isSubmitDisabled}
       >
-        <Text style={styles.ctaText}>Send verification code</Text>
+        <Text style={styles.ctaText}>{linkLabel}</Text>
       </TouchableOpacity>
     </KeyboardSafe>
   );
@@ -197,6 +230,14 @@ const styles = StyleSheet.create({
   },
   error: {
     color: '#B91C1C',
+    marginBottom: 12
+  },
+  success: {
+    color: '#047857',
+    marginBottom: 12
+  },
+  cooldownMessage: {
+    color: '#4B5563',
     marginBottom: 12
   }
 });

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ScrollView, View, Text, StyleSheet, Image, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, TextInput } from 'react-native';
 import KeyboardSafe from '../../../components/layout/KeyboardSafe';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -21,7 +21,7 @@ const CTA_BUTTONS = [
   { id: 'ScheduledRides' as const, label: 'ScheduledRides' }
 ];
 
-type Navigation = BottomTabNavigationProp<MainTabParamList>;
+type Navigation = BottomTabNavigationProp<MainTabParamList, 'Home'>;
 
 type CampusOptionId = (typeof CAMPUS_OPTIONS)[number]['id'];
 
@@ -60,7 +60,12 @@ const HomeScreen = () => {
       destination: destinationInfo
     };
 
-    navigation.navigate(screen, params);
+    if (screen === 'LiveRides') {
+      navigation.navigate('LiveRides', params);
+    } else {
+      navigation.navigate('ScheduledRides', params);
+    }
+
     // TODO: Pass role-based params for driver/rider specific flows integrated with backend.
   };
 

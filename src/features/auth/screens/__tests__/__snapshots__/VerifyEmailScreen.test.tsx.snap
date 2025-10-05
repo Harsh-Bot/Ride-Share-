@@ -1,0 +1,106 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`VerifyEmailScreen matches snapshot 1`] = `
+<View
+  style={
+    {
+      "flex": 1,
+      "justifyContent": "center",
+      "padding": 24,
+    }
+  }
+>
+  <Text
+    style={
+      {
+        "fontSize": 28,
+        "fontWeight": "700",
+        "marginBottom": 12,
+      }
+    }
+  >
+    Enter your verification code
+  </Text>
+  <Text
+    style={
+      {
+        "fontSize": 16,
+        "marginBottom": 24,
+      }
+    }
+  >
+    We sent a 6-digit code to 
+    student@sfu.ca
+    . Enter it below to continue.
+  </Text>
+  <TextInput
+    keyboardType="number-pad"
+    maxLength={6}
+    onChangeText={[Function]}
+    placeholder="000000"
+    style={
+      {
+        "borderColor": "#CCCCCC",
+        "borderRadius": 12,
+        "borderWidth": 1,
+        "fontSize": 20,
+        "letterSpacing": 8,
+        "marginBottom": 16,
+        "padding": 16,
+        "textAlign": "center",
+      }
+    }
+    textContentType="oneTimeCode"
+    value=""
+  />
+  <View
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={false}
+    onClick={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      {
+        "alignItems": "center",
+        "backgroundColor": "#D4145A",
+        "borderRadius": 12,
+        "opacity": 0.6,
+        "padding": 16,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#FFFFFF",
+          "fontWeight": "600",
+        }
+      }
+    >
+      Verify and continue
+    </Text>
+  </View>
+</View>
+`;
