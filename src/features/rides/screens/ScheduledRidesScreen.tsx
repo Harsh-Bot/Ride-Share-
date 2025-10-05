@@ -10,7 +10,7 @@ const ScheduledRidesScreen = () => {
   const route = useRoute<ScheduledRoute>();
   const role = route.params?.role ?? 'rider';
   const origin = route.params?.origin ?? 'Unknown origin';
-  const destination = route.params?.destination.label ?? 'Destination';
+  const destination = route.params?.destination?.label ?? 'Destination';
   const roleLabel = role === 'driver' ? 'Driver' : 'Rider';
 
   return (
