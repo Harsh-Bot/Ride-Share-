@@ -1,73 +1,62 @@
-import { useCallback, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform
-} from 'react-native';
-import * as Linking from 'expo-linking';
+import { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../../navigation/types';
 import { useAuth } from '../../../hooks/useAuth';
-import { showToast } from '../../../utils/toast';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'VerifyEmail'>;
 
 const VerifyEmailScreen = ({ route }: Props) => {
-  const { completeSignIn, isCompletingLink, pendingEmail, error } = useAuth();
-  const email = useMemo(() => route.params?.email ?? pendingEmail ?? '', [route.params?.email, pendingEmail]);
+  const { completeSignIn, authError, isLoading, pendingEmail } = useAuth();
+  const [code, setCode] = useState('');
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  const handleRefreshSession = useCallback(async () => {
+  const email = route.params?.email ?? pendingEmail ?? '';
+
+  const handleCodeSubmit = async () => {
+    setLocalError(null);
     try {
-      const latestUrl = (await Linking.getInitialURL()) ?? '';
-      if (!latestUrl) {
-        showToast('Open the magic link from your inbox to finish signing in.', 'error');
-        return;
-      }
-      await completeSignIn(latestUrl);
-    } catch (attemptError) {
-      showToast((attemptError as Error)?.message ?? 'We could not refresh your session.', 'error');
+      await completeSignIn(code);
+    } catch (error) {
+      setLocalError((error as Error).message);
     }
-  }, [completeSignIn]);
+  };
+
+  const message = localError ?? authError;
+  const isCodeValid = code.trim().length === 6;
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={64}
-    >
-      <View style={styles.content}>
-        <Text style={styles.title}>Check your inbox</Text>
-        <Text style={styles.body}>
-          We sent a magic link to {email ? <Text style={styles.emailText}>{email}</Text> : 'your email'}.
-          {' '}Open it on this device to finish signing in. The link expires within 15 minutes for security.
-        </Text>
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-        <TouchableOpacity
-          style={[styles.secondary, isCompletingLink ? styles.secondaryDisabled : null]}
-          onPress={handleRefreshSession}
-          disabled={isCompletingLink}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: isCompletingLink }}
-          testID="auth-refresh-session-button"
-        >
-          <Text style={styles.secondary}>
-            {isCompletingLink ? 'Looking for your link…' : 'I already tapped the link'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+    <View style={styles.container}>
+      <Text style={styles.title}>Enter your verification code</Text>
+      <Text style={styles.body}>We sent a 6-digit code to {email || 'your SFU email'}. Enter it below to continue.</Text>
+      <TextInput
+        style={styles.input}
+        value={code}
+        onChangeText={(value) => {
+          setCode(value.replace(/[^0-9]/g, ''));
+          if (localError) {
+            setLocalError(null);
+          }
+        }}
+        placeholder="000000"
+        keyboardType="number-pad"
+        maxLength={6}
+        textContentType="oneTimeCode"
+      />
+      {message ? <Text style={styles.error}>{message}</Text> : null}
+      <TouchableOpacity
+        style={[styles.cta, (!isCodeValid || isLoading) && styles.ctaDisabled]}
+        onPress={handleCodeSubmit}
+        disabled={!isCodeValid || isLoading}
+      >
+        <Text style={styles.ctaText}>{isLoading ? 'Verifying…' : 'Verify and continue'}</Text>
+      </TouchableOpacity>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF'
-  },
-  content: {
     flex: 1,
     padding: 24,
     justifyContent: 'center'
@@ -81,14 +70,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 24
   },
-  emailText: {
-    fontWeight: '600'
+  input: {
+    borderWidth: 1,
+    borderColor: '#CCCCCC',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 20,
+    letterSpacing: 8,
+    textAlign: 'center',
+    marginBottom: 16
   },
-  errorText: {
-    color: '#C62828',
-    marginBottom: 12
+  error: {
+    color: '#B91C1C',
+    marginBottom: 16,
+    textAlign: 'center'
   },
-  secondary: {
+  cta: {
+    backgroundColor: '#D4145A',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center'
@@ -99,9 +97,6 @@ const styles = StyleSheet.create({
   ctaText: {
     color: '#FFFFFF',
     fontWeight: '600'
-  },
-  secondaryDisabled: {
-    opacity: 0.6
   }
 });
 
