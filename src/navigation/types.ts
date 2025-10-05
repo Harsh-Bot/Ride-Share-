@@ -14,9 +14,7 @@ export type AuthStackParamList = {
 export type MainTabParamList = {
   Dashboard: undefined;
   LiveRides: undefined;
-  MyRides: undefined;
   ScheduledRides: undefined;
-  DriverConsole: undefined;
   Chat: undefined;
   Profile: undefined;
 };

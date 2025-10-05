@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type Role = 'driver' | 'rider';
+type Role = 'driver' | 'rider';
 
 type RoleState = {
   role: Role;

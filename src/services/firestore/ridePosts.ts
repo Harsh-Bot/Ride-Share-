@@ -1,15 +1,24 @@
 import ngeohash from 'ngeohash';
-import { collection, CollectionReference, doc, DocumentReference, Firestore, serverTimestamp, Timestamp, WithFieldValue, PartialWithFieldValue, GeoPoint } from 'firebase/firestore';
+import {
+  collection,
+  CollectionReference,
+  doc,
+  DocumentReference,
+  Firestore,
+  serverTimestamp,
+  Timestamp,
+  WithFieldValue,
+  PartialWithFieldValue
+} from 'firebase/firestore';
 import { getFirestoreDb } from '../firebase';
 
 export type RidePostStatus = 'open' | 'expired' | 'canceled' | 'inTrip';
 
 export interface RidePostOrigin {
-  lat: number | null;
-  lng: number | null;
+  lat: number;
+  lng: number;
   label: string;
   geohash: string;
-  precision: 'exact' | 'approximate';
 }
 
 export interface RidePostDocument {
@@ -20,10 +29,6 @@ export interface RidePostDocument {
   seatsAvailable: number;
   windowStart: Timestamp;
   windowEnd: Timestamp;
-  geohash: string; // duplicate for query indexes
-  driverReliability?: number; // 0..1 optional
-  driverRating?: number; // 0..5 optional
-  originGeoPoint?: GeoPoint; // for geo queries/maps
   status: RidePostStatus;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -32,18 +37,15 @@ export interface RidePostDocument {
 export interface RidePostCreateInput {
   driverId: string;
   origin: {
-    lat: number | null;
-    lng: number | null;
+    lat: number;
+    lng: number;
     label: string;
-    precision: RidePostOrigin['precision'];
   };
   destinationCampus: string;
   seatsTotal: number;
   windowStart: Timestamp;
   windowEnd: Timestamp;
   seatsAvailable?: number;
-  driverReliability?: number;
-  driverRating?: number;
 }
 
 export interface RidePostStatusUpdateInput {
@@ -72,17 +74,7 @@ const LATITUDE_MAX = 90;
 const LONGITUDE_MIN = -180;
 const LONGITUDE_MAX = 180;
 
-const validateLatLng = (lat: number | null, lng: number | null, precision: RidePostOrigin['precision']) => {
-  if (precision === 'approximate') {
-    if (lat === null || lng === null) {
-      return;
-    }
-  }
-
-  if (lat === null || lng === null) {
-    throw new Error('Origin coordinates required for precise locations');
-  }
-
+const validateLatLng = (lat: number, lng: number) => {
   if (Number.isNaN(lat) || Number.isNaN(lng)) {
     throw new Error('Origin coordinates must be valid numbers');
   }
@@ -127,9 +119,7 @@ export const buildRidePostCreateData = ({
   seatsTotal,
   windowStart,
   windowEnd,
-  seatsAvailable,
-  driverReliability: inputDriverReliability,
-  driverRating: inputDriverRating
+  seatsAvailable
 }: RidePostCreateInput): RidePostWriteData => {
   if (!driverId) {
     throw new Error('driverId is required');
@@ -141,43 +131,32 @@ export const buildRidePostCreateData = ({
     throw new Error('origin.label is required');
   }
 
-  validateLatLng(origin.lat, origin.lng, origin.precision);
+  validateLatLng(origin.lat, origin.lng);
   validateTimeWindow(windowStart, windowEnd);
 
   const totalSeats = seatsTotal;
   const availableSeats = seatsAvailable ?? seatsTotal;
   validateSeats(totalSeats, availableSeats);
 
-  const GEOHASH_PRECISION = 7; // 6–8 per requirements; 7 is a balanced default
-  const geohash = origin.lat !== null && origin.lng !== null ? ngeohash.encode(origin.lat, origin.lng, GEOHASH_PRECISION) : 'manual';
+  const geohash = ngeohash.encode(origin.lat, origin.lng);
 
-  // optional quality metrics validation (soft constraints)
-  const driverReliability = typeof inputDriverReliability === 'number' ? Math.max(0, Math.min(1, inputDriverReliability)) : undefined;
-  const driverRating = typeof inputDriverRating === 'number' ? Math.max(0, Math.min(5, inputDriverRating)) : undefined;
-
-  const base: RidePostWriteData = {
+  return {
     driverId,
     origin: {
       lat: origin.lat,
       lng: origin.lng,
       label: origin.label,
-      geohash,
-      precision: origin.precision
+      geohash
     },
     destinationCampus,
     seatsTotal: totalSeats,
     seatsAvailable: availableSeats,
     windowStart,
     windowEnd,
-    geohash,
     status: 'open',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   };
-  if (driverReliability !== undefined) base.driverReliability = driverReliability;
-  if (driverRating !== undefined) base.driverRating = driverRating;
-  if (origin.lat !== null && origin.lng !== null) base.originGeoPoint = new GeoPoint(origin.lat, origin.lng);
-  return base;
 };
 
 export const buildRidePostStatusUpdate = ({
