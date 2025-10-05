@@ -27,19 +27,25 @@ test.afterAll(async () => { if (testEnv && !shouldSkip) await testEnv.cleanup();
 test.afterEach(async () => { if (testEnv && !shouldSkip) await testEnv.clearFirestore(); });
 
 const createPost = async (db: Firestore, driverId: string, destinationCampus: string, rel = 0.8, rating = 4.6) => {
-  const ref = doc(collection(db, 'ridePosts'));
-  await assertSucceeds(setDoc(ref, buildRidePostCreateData({
-    driverId,
-    origin: { lat: 49.28, lng: -123.12, label: 'X', precision: 'exact' },
-    destinationCampus,
-    seatsTotal: 2,
-    windowStart: Timestamp.fromDate(new Date(Date.now() + 60_000)),
-    windowEnd: Timestamp.fromDate(new Date(Date.now() + 30 * 60_000)),
-    seatsAvailable: 2,
-    driverReliability: rel,
-    driverRating: rating
-  })));
-  return ref;
+  // Create using admin DB to allow backend-only fields, then return a client ref at same path
+  let path = '' as string;
+  await testEnv.withSecurityRulesDisabled(async (admin) => {
+    const adb = admin.firestore();
+    const adminRef = doc(collection(adb, 'ridePosts'));
+    path = adminRef.path;
+    await setDoc(adminRef, buildRidePostCreateData({
+      driverId,
+      origin: { lat: 49.28, lng: -123.12, label: 'X', precision: 'exact' },
+      destinationCampus,
+      seatsTotal: 2,
+      windowStart: Timestamp.fromDate(new Date(Date.now() + 60_000)),
+      windowEnd: Timestamp.fromDate(new Date(Date.now() + 30 * 60_000)),
+      seatsAvailable: 2,
+      driverReliability: rel,
+      driverRating: rating
+    }));
+  });
+  return doc(db, path);
 };
 
 test('schema permits geohash/driverReliability/driverRating and queries match indexes', async () => {
@@ -83,4 +89,3 @@ test('invalid schema (missing windowStart) rejected', async () => {
     updatedAt: Timestamp.now()
   }));
 });
-

@@ -95,7 +95,11 @@ service cloud.firestore {
         data.status == 'open' &&
         data.createdAt == request.time &&
         data.updatedAt == request.time &&
-        !driverHasActiveTrip();
+        !driverHasActiveTrip() &&
+        // prevent spoofing quality metrics on client-created posts
+        (
+          isBackend() || !data.keys().hasAny(['driverReliability', 'driverRating'])
+        );
     }
 
     function isValidDriverRideUpdate(data) {
@@ -105,7 +109,14 @@ service cloud.firestore {
         isDriverCreatingOwnRide(resource.data) &&
         data.createdAt == resource.data.createdAt &&
         data.updatedAt == request.time &&
-        (data.status == 'open' || data.status == 'canceled');
+        (data.status == 'open' || data.status == 'canceled') &&
+        // drivers cannot alter reliability/rating; only backend may
+        (
+          !data.keys().hasAny(['driverReliability']) || data.driverReliability == resource.data.driverReliability
+        ) &&
+        (
+          !data.keys().hasAny(['driverRating']) || data.driverRating == resource.data.driverRating
+        );
     }
 
     function isValidBackendRideUpdate(data) {
@@ -127,20 +138,29 @@ service cloud.firestore {
       allow create: if isDriverCreatingOwnRide(request.resource.data) && isValidRidePostCreate(request.resource.data);
       allow read: if isAuthenticated();
       allow update: if (
-        (isBackend() && isValidBackendRideUpdate(request.resource.data)) ||
-        isValidDriverRideUpdate(request.resource.data) ||
-        // Hackathon: allow authenticated users to update only seatsAvailable and updatedAt for demo flows
         (
-          isAuthenticated() &&
-          resource.data.status == 'open' &&
-          // Hackathon MVP: allow atomic seat adjustments by any authed client
-          request.resource.data.diff(resource.data).changedKeys().hasOnly(['seatsAvailable','updatedAt']) &&
-          request.resource.data.seatsAvailable is int &&
-          request.resource.data.seatsAvailable >= 0 &&
-          request.resource.data.seatsAvailable <= resource.data.seatsTotal &&
-          // allow small bursts (e.g., accepting multiple riders) within [-2, +2]
-          (request.resource.data.seatsAvailable - resource.data.seatsAvailable) >= -2 &&
-          (request.resource.data.seatsAvailable - resource.data.seatsAvailable) <= 2
+          (isBackend() && isValidBackendRideUpdate(request.resource.data)) ||
+          isValidDriverRideUpdate(request.resource.data) ||
+          // Hackathon: allow authenticated users to update only seatsAvailable and updatedAt for demo flows
+          (
+            isAuthenticated() &&
+            resource.data.status == 'open' &&
+            // Hackathon MVP: allow atomic seat adjustments by any authed client
+            request.resource.data.diff(resource.data).changedKeys().hasOnly(['seatsAvailable','updatedAt']) &&
+            request.resource.data.seatsAvailable is int &&
+            request.resource.data.seatsAvailable >= 0 &&
+            request.resource.data.seatsAvailable <= resource.data.seatsTotal &&
+            // allow small bursts (e.g., accepting multiple riders) within [-2, +2]
+            (request.resource.data.seatsAvailable - resource.data.seatsAvailable) >= -2 &&
+            (request.resource.data.seatsAvailable - resource.data.seatsAvailable) <= 2
+          )
+        ) &&
+        // Never allow non-backend to change reliability/rating
+        (
+          isBackend() || (
+            (!request.resource.data.keys().hasAny(['driverReliability']) || request.resource.data.driverReliability == resource.data.driverReliability) &&
+            (!request.resource.data.keys().hasAny(['driverRating']) || request.resource.data.driverRating == resource.data.driverRating)
+          )
         )
       );
       allow delete: if isBackend();
@@ -178,7 +198,8 @@ service cloud.firestore {
 
     // Ephemeral cache for top matches, doc id = riderId
     match /matches/{riderId} {
-      allow read, create, update, delete: if isAuthenticated() && request.auth.uid == riderId;
+      // Composite scores are backend-managed only
+      allow read, create, update, delete: if isBackend();
     }
 
     match /users/{uid} {

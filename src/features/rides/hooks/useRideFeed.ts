@@ -19,6 +19,7 @@ export type RideFeedState = {
 export type SubscribeToRideFeedFn = (options: {
   onSnapshot: (items: RideFeedItem[], fromServer: boolean) => void;
   onError: (error: unknown) => void;
+  geohashPrefixes?: string[];
 }) => () => void;
 
 export type RefreshRideFeedFn = () => Promise<RideFeedItem[]>;
@@ -104,15 +105,24 @@ export class RideFeedController {
 }
 
 // Default Firestore-powered subscribe/refresh
-const defaultSubscribe: SubscribeToRideFeedFn = ({ onSnapshot: push, onError }) => {
+const defaultSubscribe: SubscribeToRideFeedFn = ({ onSnapshot: push, onError, geohashPrefixes }) => {
   const db = getFirestoreDb();
-  const q = query(collection(db, 'ridePosts'));
+  let qRef: any;
+  if (geohashPrefixes && geohashPrefixes.length === 1) {
+    const prefix = geohashPrefixes[0];
+    const start = prefix;
+    const end = prefix + '\uf8ff';
+    qRef = query(collection(db, 'ridePosts'), (global as any).where('status', '==', 'open'), (global as any).orderBy('geohash'), (global as any).startAt(start), (global as any).endAt(end));
+  } else {
+    qRef = query(collection(db, 'ridePosts'), (global as any).where('status', '==', 'open'));
+  }
   const unsub = fsOnSnapshot(
-    q,
+    qRef,
     (snap: any) => {
+      const now = Date.now();
       const items: RideFeedItem[] = snap.docs
         .map((d: any) => ({ id: d.id, ...(d.data() as any) }))
-        .filter((d: any) => d.status === 'open')
+        .filter((d: any) => d.status === 'open' && (d.seatsAvailable ?? 0) > 0 && (!d.windowEnd?.toMillis || d.windowEnd.toMillis() > now))
         .map((d: any) => ({ id: d.id, destinationCampus: d.destinationCampus, seatsAvailable: d.seatsAvailable ?? 0, status: d.status }));
       const fromServer = !(snap.metadata?.fromCache ?? false);
       push(items, fromServer);
@@ -133,12 +143,12 @@ const defaultRefresh: RefreshRideFeedFn = async () => {
 };
 
 export const useRideFeed = (
-  deps: Partial<{ subscribe: SubscribeToRideFeedFn; refreshFn: RefreshRideFeedFn; now: () => number }> = {}
+  deps: Partial<{ subscribe: SubscribeToRideFeedFn; refreshFn: RefreshRideFeedFn; now: () => number; geohashPrefixes: string[] }> = {}
 ) => {
   const controllerRef = useRef<RideFeedController | null>(null);
   if (!controllerRef.current) {
     controllerRef.current = new RideFeedController({
-      subscribe: deps.subscribe ?? defaultSubscribe,
+      subscribe: (opts) => (deps.subscribe ?? defaultSubscribe)({ ...opts, geohashPrefixes: deps.geohashPrefixes }),
       refreshFn: deps.refreshFn ?? defaultRefresh,
       now: deps.now
     });

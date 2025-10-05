@@ -16,6 +16,7 @@ type MatchEntry = {
   driverReliability?: number;
   windowStartMs: number;
   distanceMeters: number;
+  score?: number;
 };
 
 const readRiderFilters = async (riderId: string, db: Firestore) => {
@@ -66,15 +67,34 @@ export const recomputeMatchesForRider = async (
       });
     }
   }
-  // Sort by reliability, rating, proximity, then recency
-  candidates.sort((a, b) => (b.driverReliability ?? 0) - (a.driverReliability ?? 0) || (b.driverRating ?? 0) - (a.driverRating ?? 0) || a.distanceMeters - b.distanceMeters || b.windowStartMs - a.windowStartMs);
+  // Compute composite score per spec
+  // score = 0.4*timeDeltaScore + 0.35*geoScore + 0.15*reliabilityScore + 0.1*ratingScore
+  // Normalization:
+  //  - timeDeltaScore: 1 - min(delta, horizon)/horizon (horizon = 60 min)
+  //  - geoScore: 1 - (distance/radius)
+  //  - reliabilityScore: clamp in [0,1] (default 0.5 if missing)
+  //  - ratingScore: (rating/5) (default 0.5 if missing)
+  const horizonMs = 60 * 60_000;
+  const radius = Math.max(1, filters.radiusMeters);
+  for (const c of candidates) {
+    const delta = Math.max(0, c.windowStartMs - nowMs);
+    const timeDeltaScore = 1 - Math.min(delta, horizonMs) / horizonMs;
+    const geoScore = 1 - Math.min(Math.max(c.distanceMeters, 0), radius) / radius;
+    const reliabilityScore = typeof c.driverReliability === 'number' ? Math.min(Math.max(c.driverReliability, 0), 1) : 0.5;
+    const ratingScore = typeof c.driverRating === 'number' ? Math.min(Math.max(c.driverRating / 5, 0), 1) : 0.5;
+    c.score = 0.4 * timeDeltaScore + 0.35 * geoScore + 0.15 * reliabilityScore + 0.1 * ratingScore;
+  }
+
+  // Sort by score desc, tie-break by proximity asc, then recency desc
+  candidates.sort((a, b) => (b.score! - a.score!) || (a.distanceMeters - b.distanceMeters) || (b.windowStartMs - a.windowStartMs));
   const top = candidates.slice(0, topN).map((e) => {
     const out: any = {
       postId: e.postId,
       destinationCampus: e.destinationCampus,
       seatsAvailable: e.seatsAvailable,
       windowStartMs: e.windowStartMs,
-      distanceMeters: e.distanceMeters
+      distanceMeters: e.distanceMeters,
+      score: e.score
     };
     if (typeof e.driverRating === 'number') out.driverRating = e.driverRating;
     if (typeof e.driverReliability === 'number') out.driverReliability = e.driverReliability;
@@ -85,4 +105,25 @@ export const recomputeMatchesForRider = async (
   await runTransaction(db, async (tx) => {
     tx.set(matchesRef, { riderId, top, updatedAt: serverTimestamp() } as any, { merge: true } as any);
   });
+};
+
+export const sweepMatchesForRider = async (
+  riderId: string,
+  { db = getFirestoreDb(), now = Date.now }: { db?: Firestore; now?: () => number } = {}
+) => {
+  const matchRef = doc(db, 'matches', riderId);
+  const matchSnap = await getDoc(matchRef);
+  if (!matchSnap.exists()) return;
+  const top = (matchSnap.data() as any)?.top ?? [];
+  const nowMs = now();
+  const cleaned: any[] = [];
+  for (const m of top) {
+    const postRef = doc(db, 'ridePosts', m.postId);
+    const postSnap = await getDoc(postRef);
+    if (!postSnap.exists()) continue;
+    const post: any = postSnap.data();
+    const valid = post.status === 'open' && (post.seatsAvailable ?? 0) > 0 && (!post.windowEnd?.toMillis || post.windowEnd.toMillis() > nowMs);
+    if (valid) cleaned.push(m);
+  }
+  await setDoc(matchRef, { top: cleaned, updatedAt: serverTimestamp() } as any, { merge: true });
 };
