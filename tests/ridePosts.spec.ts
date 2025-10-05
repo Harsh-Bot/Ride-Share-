@@ -1,3 +1,4 @@
+import './setup/playwrightRegister.js';
 import { test, expect } from '@playwright/test';
 import {
   initializeTestEnvironment,

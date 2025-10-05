@@ -6,5 +6,6 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   reporter: 'list',
   fullyParallel: false,
-  workers: 1
+  workers: 1,
+  testIgnore: ['**/jest/**']
 });

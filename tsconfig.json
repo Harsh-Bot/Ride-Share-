@@ -5,7 +5,9 @@
     "noEmit": true,
     "types": [
       "react",
-      "react-native"
+      "react-native",
+      "node",
+      "jest"
     ]
   },
   "include": [
