@@ -53,7 +53,7 @@ const VerifyEmailScreen = ({ route }: Props) => {
           accessibilityState={{ disabled: isCompletingLink }}
           testID="auth-refresh-session-button"
         >
-          <Text style={styles.secondaryText}>
+          <Text style={styles.secondary}>
             {isCompletingLink ? 'Looking for your link…' : 'I already tapped the link'}
           </Text>
         </TouchableOpacity>

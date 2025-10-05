@@ -7,5 +7,5 @@ export default defineConfig({
   reporter: 'list',
   fullyParallel: false,
   workers: 1,
-  testIgnore: ['**/jest/**']
+  testIgnore: ['**/jest/**', '**/*.rules.test.ts']
 });

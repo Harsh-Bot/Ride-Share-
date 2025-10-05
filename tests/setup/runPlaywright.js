@@ -3,6 +3,8 @@ const path = require('path');
 
 const firebaseConfig = require('../../firebase.json');
 
+const PLAYWRIGHT_REGISTER_PATH = path.resolve(__dirname, 'playwrightRegister.js');
+
 const emulatorConfig = firebaseConfig.emulators || {};
 
 const defaultHost = (config = {}, fallbackPort) => {
@@ -151,13 +153,15 @@ const runPlaywright = () => {
     : path.join('node_modules', '.bin', 'playwright');
 
   return new Promise((resolve, reject) => {
+  const existingNodeOptions = process.env.NODE_OPTIONS ? `${process.env.NODE_OPTIONS} ` : '';
   const child = spawn(playwrightBin, PLAYWRIGHT_ARGS, {
     stdio: 'inherit',
     env: {
       ...process.env,
       FIRESTORE_EMULATOR_HOST: FIRESTORE_HOST,
       FIREBASE_AUTH_EMULATOR_HOST: AUTH_HOST,
-      FIREBASE_FUNCTIONS_EMULATOR_HOST: FUNCTIONS_HOST
+      FIREBASE_FUNCTIONS_EMULATOR_HOST: FUNCTIONS_HOST,
+      NODE_OPTIONS: `${existingNodeOptions}--require=${PLAYWRIGHT_REGISTER_PATH}`.trim()
     }
   });
 
