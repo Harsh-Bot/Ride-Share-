@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import HomeScreen from '../HomeScreen';
+import { MapProvider } from '../../../../contexts/MapContext';
 import { useProfileStore } from '../../../../store/useProfileStore';
 import type { ReactTestInstance } from 'react-test-renderer';
 
@@ -37,13 +38,21 @@ describe('HomeScreen', () => {
 
   it('renders greeting with nickname when available', () => {
     useProfileStore.getState().setNickname('Harmeet');
-    const { getByText } = render(<HomeScreen />);
+    const { getByText } = render(
+      <MapProvider>
+        <HomeScreen />
+      </MapProvider>
+    );
 
     expect(getByText('Hey, Harmeet!')).toBeTruthy();
   });
 
   it('disables CTAs when origin is empty', () => {
-    const { getByLabelText } = render(<HomeScreen />);
+    const { getByLabelText } = render(
+      <MapProvider>
+        <HomeScreen />
+      </MapProvider>
+    );
 
     const liveRideButton = getByLabelText('Navigate to LiveRide') as ReactTestInstance;
     const props = liveRideButton.props as { accessibilityState?: { disabled?: boolean }; disabled?: boolean };
@@ -53,7 +62,11 @@ describe('HomeScreen', () => {
   it('navigates to LiveRides with role and locations when selections valid', () => {
     const navigateMock = jest.fn();
     mockedUseNavigation.mockReturnValue({ navigate: navigateMock });
-    const { getByLabelText } = render(<HomeScreen />);
+    const { getByLabelText } = render(
+      <MapProvider>
+        <HomeScreen />
+      </MapProvider>
+    );
 
     fireEvent.changeText(getByLabelText('Enter origin address'), '123 Main St');
     fireEvent.press(getByLabelText('Role Driver'));
