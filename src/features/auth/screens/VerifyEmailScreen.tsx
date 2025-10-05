@@ -90,10 +90,14 @@ const styles = StyleSheet.create({
   },
   secondary: {
     padding: 16,
+    borderRadius: 12,
     alignItems: 'center'
   },
-  secondaryText: {
-    color: '#D4145A',
+  ctaDisabled: {
+    opacity: 0.6
+  },
+  ctaText: {
+    color: '#FFFFFF',
     fontWeight: '600'
   },
   secondaryDisabled: {

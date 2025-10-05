@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../../navigation/types';
-import illustration from '../../../../assets/welcome-illustration.png';
+import illustration from '../../../../assets/images/welcome-illustration.png';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Welcome'>;
 

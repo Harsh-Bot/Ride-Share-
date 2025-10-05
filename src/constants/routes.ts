@@ -5,7 +5,7 @@ export const APP_ROUTES = {
     VERIFY_EMAIL: 'VerifyEmail'
   },
   MAIN: {
-    DASHBOARD: 'Dashboard',
+    HOME: 'Home',
     LIVE_RIDES: 'LiveRides',
     SCHEDULED_RIDES: 'ScheduledRides',
     CHAT: 'Chat',

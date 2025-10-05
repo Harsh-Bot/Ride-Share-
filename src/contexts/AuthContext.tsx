@@ -116,7 +116,7 @@ type AuthContextValue = {
   isCompletingLink: boolean;
   error: string | null;
   initiateSignIn: (email: string) => Promise<void>;
-  completeSignIn: (link: string) => Promise<void>;
+  completeSignIn: (code: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetError: () => void;
 };
